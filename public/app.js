@@ -71,6 +71,9 @@ const ICONS = {
   alert: '<path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
   palette: '<circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.92 0 1.67-.75 1.67-1.67 0-.44-.18-.83-.43-1.13-.27-.3-.44-.7-.44-1.12 0-.9.73-1.67 1.67-1.67H17a4.33 4.33 0 0 0 4.33-4.33C21.33 6.16 17.16 2 12 2z"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
+  star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+  key: '<path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>',
 };
 
 const svg = (name) =>
@@ -536,6 +539,297 @@ loadSettings();
 applySettings();
 
 /* ================================================================
+   Downloads & Tools — page 5
+   ================================================================ */
+
+const DOWNLOAD_CATS = [
+  ["browsers", "Browsers & extensions", "globe"],
+  ["vpn", "VPNs", "shield"],
+  ["passwords", "Password managers", "lock"],
+  ["auth", "2FA & hardware keys", "key"],
+  ["email", "Private email & aliasing", "mail"],
+  ["chat", "Secure messaging", "chat"],
+  ["dns", "DNS & ad-blocking", "network"],
+  ["os", "Operating systems", "box"],
+  ["defense", "Hardening & endpoint defense", "wrench"],
+  ["removal", "Data removal & breach monitors", "file"],
+  ["meta", "Metadata & privacy tools", "image"],
+  ["storage", "Encrypted storage & backups", "archive"],
+  ["phone", "Phone hardening", "phone2"],
+  ["network", "Network monitoring", "activity"],
+  ["share", "Secure file sharing", "share"],
+  ["osint", "OSINT & recon", "search"],
+  ["search", "Private search engines", "languages"],
+  ["guides", "Guides & checklists", "book"],
+  ["hardware", "Physical OPSEC", "camera"],
+];
+
+const DOWNLOADS = [
+  /* ---- browsers & extensions ---- */
+  { n: "Firefox", u: "https://www.mozilla.org/firefox/", c: "browsers", d: "The privacy baseline browser — pair it with uBlock Origin.", t: "Win · Mac · Lin · iOS · And", e: true },
+  { n: "Tor Browser", u: "https://www.torproject.org/download/", c: "browsers", d: "Hardened Firefox that routes every request over Tor. Use for high-sensitivity research.", t: "Win · Mac · Lin", e: true },
+  { n: "LibreWolf", u: "https://librewolf.net/", c: "browsers", d: "Privacy-focused Firefox fork with fingerprinting and telemetry removed by default.", t: "Win · Mac · Lin" },
+  { n: "Brave", u: "https://brave.com/download/", c: "browsers", d: "Chromium-based with built-in ad/tracker blocking and HTTPS upgrades.", t: "Win · Mac · Lin · iOS · And" },
+  { n: "uBlock Origin", u: "https://github.com/gorhill/uBlock#installation", c: "browsers", d: "Ad and tracker blocker with cosmetic filtering. Non-negotiable first install.", t: "Ext · all browsers", e: true },
+  { n: "Privacy Badger", u: "https://privacybadger.org/", c: "browsers", d: "EFF's learning tracker blocker — blocks anything that tracks you across sites.", t: "Ext · Firefox/Chrome" },
+  { n: "NoScript", u: "https://noscript.net/", c: "browsers", d: "Blocks JavaScript, Java and plugins by default. Highest-impact script defense.", t: "Ext · Firefox" },
+  { n: "LocalCDN", u: "https://codeberg.org/nobody/LocalCDN", c: "browsers", d: "Replaces CDN requests with local resources — removes a major tracking vector.", t: "Ext · Firefox" },
+  { n: "CanvasBlocker", u: "https://github.com/kkapsner/CanvasBlocker", c: "browsers", d: "Fights canvas fingerprinting with fake or spoofed APIs.", t: "Ext · Firefox" },
+  { n: "Cookie AutoDelete", u: "https://github.com/Cookie-AutoDelete/Cookie-AutoDelete", c: "browsers", d: "Wipes cookies the moment a tab closes. Kills session tracking.", t: "Ext · Firefox/Chrome" },
+  { n: "ClearURLs", u: "https://docs.clearurls.xyz/", c: "browsers", d: "Strips tracking parameters (utm_, fbclid…) from every URL automatically.", t: "Ext · Firefox/Chrome" },
+  { n: "Multi-Account Containers", u: "https://github.com/mozilla/multi-account-containers", c: "browsers", d: "Isolate your Google/Amazon/email logins into separate cookie jars.", t: "Ext · Firefox" },
+  { n: "Ghostery", u: "https://www.ghostery.com/", c: "browsers", d: "Tracker blocker with a transparent purposed trackers list.", t: "Ext · all browsers" },
+  { n: "SponsorBlock", u: "https://sponsor.ajay.app/", c: "browsers", d: "Auto-skips sponsor segments and self-promos in YouTube videos.", t: "Ext · all browsers" },
+  { n: "Dark Reader", u: "https://darkreader.org/", c: "browsers", d: "Dark mode for every site — also reduces OLED glare.", t: "Ext · all browsers" },
+
+  /* ---- vpn ---- */
+  { n: "Mullvad VPN", u: "https://mullvad.net/", c: "vpn", d: "Flat-rate WireGuard VPN with anonymous account numbers. Audited, no email required.", t: "Win · Mac · Lin · iOS · And", e: true },
+  { n: "Proton VPN", u: "https://protonvpn.com/", c: "vpn", d: "Swiss, audited, has a genuinely free tier and secure-core servers.", t: "Win · Mac · Lin · iOS · And", e: true },
+  { n: "IVPN", u: "https://www.ivpn.net/", c: "vpn", d: "No-log VPN with multi-hop and strong privacy posture.", t: "Win · Mac · Lin · iOS · And" },
+  { n: "WireGuard", u: "https://www.wireguard.com/", c: "vpn", d: "The modern, audited VPN protocol — fast, simple, the standard.", t: "Win · Mac · Lin · iOS · And" },
+  { n: "Tailscale", u: "https://tailscale.com/", c: "vpn", d: "Private WireGuard mesh for your own devices — access your stuff, not their network.", t: "Win · Mac · Lin · iOS · And" },
+  { n: "OpenVPN", u: "https://openvpn.net/", c: "vpn", d: "Battle-tested VPN client/protocol, useful for legacy VPN providers.", t: "Win · Mac · Lin · iOS · And" },
+  { n: "Riseup VPN", u: "https://riseup.net/en/vpn", c: "vpn", d: "Free activist VPN built by the collective that runs Riseup services.", t: "Win · Mac · Lin · And" },
+
+  /* ---- password managers ---- */
+  { n: "Bitwarden", u: "https://bitwarden.com/", c: "passwords", d: "Open-source password manager with cloud sync and apps everywhere. Use unique random passwords everywhere.", t: "Win · Mac · Lin · iOS · And · Web", e: true },
+  { n: "KeePassXC", u: "https://keepassxc.org/", c: "passwords", d: "Fully offline vault stored in an encrypted file you control.", t: "Win · Mac · Lin" },
+  { n: "Proton Pass", u: "https://proton.me/pass", c: "passwords", d: "Proton's E2EE manager with aliases and integrated 2FA.", t: "Win · Mac · iOS · And · Web" },
+  { n: "1Password", u: "https://1password.com/", c: "passwords", d: "Polished premium manager with strong secret-key model.", t: "Win · Mac · Lin · iOS · And" },
+  { n: "Vaultwarden", u: "https://github.com/dani-garcia/vaultwarden", c: "passwords", d: "Self-host your own Bitwarden-compatible server — no third-party cloud.", t: "Server · Docker" },
+
+  /* ---- 2FA & hardware keys ---- */
+  { n: "Aegis Authenticator", u: "https://getaegis.app/", c: "auth", d: "Open-source 2FA app with encrypted, exportable vaults.", t: "Android", e: true },
+  { n: "Ente Auth", u: "https://ente.io/auth/", c: "auth", d: "Cross-platform authenticator with E2EE backup of your codes.", t: "iOS · And · Web" },
+  { n: "YubiKey 5", u: "https://www.yubico.com/", c: "auth", d: "Hardware security key — the strongest second factor. Put one on your email account.", t: "USB-C / NFC", e: true },
+  { n: "Nitrokey 3", u: "https://www.nitrokey.com/", c: "auth", d: "Open-source hardware key supporting FIDO2 and PGP.", t: "USB-C / NFC" },
+  { n: "Raivo OTP", u: "https://raivo-otp.com/", c: "auth", d: "iOS 2FA with iCloud backup and biometrics.", t: "iOS" },
+
+  /* ---- private email & aliasing ---- */
+  { n: "SimpleLogin", u: "https://simplelogin.io/", c: "email", d: "Generate an alias per service so the real address never leaks. Kill an alias anytime.", t: "Web · iOS · And · Ext", e: true },
+  { n: "DuckDuckGo Email Protection", u: "https://duckduckgo.com/email/", c: "email", d: "Free @duck.com aliases that strip trackers from forwarded mail.", t: "Web · Ext" },
+  { n: "Addy.io", u: "https://addy.io/", c: "email", d: "Open-source, self-hostable alias service with shared domains.", t: "Web · And · Ext" },
+  { n: "Proton Mail", u: "https://proton.me/mail", c: "email", d: "Swiss E2EE email with zero-access encryption and aliases.", t: "Web · iOS · And", e: true },
+  { n: "Tuta (Tutanota)", u: "https://tuta.com/", c: "email", d: "E2EE email that also encrypts subject lines.", t: "Web · iOS · And" },
+
+  /* ---- secure messaging ---- */
+  { n: "Signal", u: "https://signal.org/download/", c: "chat", d: "The default for anything sensitive — audited E2EE, disappearing messages.", t: "iOS · And · Win · Mac · Lin", e: true },
+  { n: "Session", u: "https://getsession.org/", c: "chat", d: "Metadata-minimizing messenger — no phone number required.", t: "iOS · And · Win · Mac · Lin" },
+  { n: "SimpleX Chat", u: "https://simplex.chat/", c: "chat", d: "No user IDs at all — nobody knows who you are on the network.", t: "iOS · And · Win · Mac · Lin" },
+  { n: "Element", u: "https://element.io/", c: "chat", d: "Client for the federated Matrix protocol — run your own server.", t: "iOS · And · Win · Mac · Lin · Web" },
+  { n: "Threema", u: "https://threema.ch/", c: "chat", d: "Paid E2EE messenger that works without a phone number.", t: "iOS · And" },
+  { n: "Briar", u: "https://briarproject.org/", c: "chat", d: "P2P messaging over Tor or Bluetooth — survives network blackouts.", t: "Android" },
+  { n: "Wire", u: "https://wire.com/", c: "chat", d: "E2EE team messenger with self-hosting options.", t: "iOS · And · Win · Mac · Lin · Web" },
+
+  /* ---- dns & ad-blocking ---- */
+  { n: "NextDNS", u: "https://nextdns.io/", c: "dns", d: "Configurable DNS filtering — blocks trackers, ads and malicious domains network-wide.", t: "Web · Win · Mac · iOS · And · Router", e: true },
+  { n: "Quad9", u: "https://quad9.net/", c: "dns", d: "DNS that blocks known malicious domains. Set it as your system resolver.", t: "All devices", e: true },
+  { n: "AdGuard Home", u: "https://adguard.com/en/adguard-home/", c: "dns", d: "Self-hosted DNS-level ad/tracker blocking for your whole network.", t: "Server · Docker · Raspberry Pi" },
+  { n: "Pi-hole", u: "https://pi-hole.net/", c: "dns", d: "Network-wide ad blocking on a Raspberry Pi with a dashboard.", t: "Raspberry Pi · Linux" },
+  { n: "dnscrypt-proxy", u: "https://github.com/DNSCrypt/dnscrypt-proxy", c: "dns", d: "Encrypted DNS proxy with relay and filtering support.", t: "Win · Mac · Lin" },
+
+  /* ---- operating systems ---- */
+  { n: "Tails", u: "https://tails.net/", c: "os", d: "Amnesic OS from a USB stick — leaves no trace on the machine, forces Tor.", t: "USB · x86", e: true },
+  { n: "Qubes OS", u: "https://www.qubes-os.org/", c: "os", d: "Compartmentalized desktop — every task in its own disposable VM.", t: "x86", e: true },
+  { n: "Whonix", u: "https://www.whonix.org/", c: "os", d: "Tor-focused gateway + workstation VMs, runnable inside VirtualBox/Qubes.", t: "VM · x86" },
+  { n: "Linux Mint", u: "https://linuxmint.com/", c: "os", d: "Easy, privacy-respecting desktop for daily use away from Windows telemetry.", t: "x86" },
+  { n: "Fedora", u: "https://fedoraproject.org/", c: "os", d: "Current, well-maintained distro with sane security defaults.", t: "x86 · ARM" },
+  { n: "Debian", u: "https://www.debian.org/", c: "os", d: "Stable base with zero telemetry — the most common server/workstation pick.", t: "x86 · ARM" },
+  { n: "Pop!_OS", u: "https://pop.system76.com/", c: "os", d: "Polished Ubuntu-based desktop from System76, good out of the box.", t: "x86" },
+  { n: "Arch Linux", u: "https://archlinux.org/", c: "os", d: "Rolling-release DIY distro — you know exactly what's installed.", t: "x86" },
+
+  /* ---- hardening & endpoint defense ---- */
+  { n: "Microsoft Defender", u: "https://www.microsoft.com/windows/microsoft-defender", c: "defense", d: "Built into Windows — turn on tamper protection and keep it updated.", t: "Windows", e: true },
+  { n: "CrowdStrike Falcon", u: "https://www.crowdstrike.com/", c: "defense", d: "Industry-standard EDR if you handle sensitive data or run ops.", t: "Win · Mac · Lin" },
+  { n: "SentinelOne", u: "https://www.sentinelone.com/", c: "defense", d: "AI EDR/XDR with rollback and remote response.", t: "Win · Mac · Lin" },
+  { n: "Bitdefender", u: "https://www.bitdefender.com/", c: "defense", d: "Lightweight AV with strong real-time protection.", t: "Win · Mac · And" },
+  { n: "Malwarebytes", u: "https://www.malwarebytes.com/", c: "defense", d: "Second-opinion scanner for adware and PUPs AV misses.", t: "Win · Mac · And" },
+  { n: "O&O ShutUp10++", u: "https://www.oo-software.com/en/shutup10", c: "defense", d: "One-click disabling of Windows telemetry, ads and tracking.", t: "Windows", e: true },
+  { n: "WPD (Windows Privacy Dashboard)", u: "https://wpd.app/", c: "defense", d: "Fine-grained Windows privacy toggles without the bloat.", t: "Windows" },
+  { n: "osquery", u: "https://www.osquery.io/", c: "defense", d: "Expose your OS as a queryable database for endpoint visibility.", t: "Win · Mac · Lin" },
+  { n: "Wazuh", u: "https://wazuh.com/", c: "defense", d: "Open-source XDR/SIEM — file integrity, detection and alerting.", t: "Server · Agents" },
+  { n: "Velociraptor", u: "https://docs.velociraptor.app/", c: "defense", d: "Endpoint visibility and forensic collection at scale.", t: "Win · Mac · Lin · Server" },
+
+  /* ---- data removal & breach monitors ---- */
+  { n: "DeleteMe", u: "https://joindeleteme.com/", c: "removal", d: "Pays a team to remove you from people-search sites, quarterly.", t: "Service", e: true },
+  { n: "Incogni", u: "https://incogni.com/", c: "removal", d: "Automated broker/data-seller opt-outs on your behalf.", t: "Service" },
+  { n: "Redact", u: "https://www.redact.dev/", c: "removal", d: "Data removal plus a free data-minimization dashboard.", t: "Service" },
+  { n: "Removaly", u: "https://removaly.com/", c: "removal", d: "Continuous broker removal with monitoring.", t: "Service" },
+  { n: "Optery", u: "https://optery.com/", c: "removal", d: "Free exposure scan plus paid removal packages.", t: "Service" },
+  { n: "EasyOptOut", u: "https://easyoptout.com/", c: "removal", d: "Free, community-maintained opt-out guides for hundreds of sites.", t: "Web", e: true },
+  { n: "Have I Been Pwned", u: "https://haveibeenpwned.com/", c: "removal", d: "Check every email against breach databases. Subscribe to alerts.", t: "Web", e: true },
+  { n: "Google Remove Information", u: "https://reportcontent.google.com/", c: "removal", d: "Official form to remove sensitive personal info from Google results.", t: "Web" },
+  { n: "BrandYourself", u: "https://brandyourself.com/", c: "removal", d: "Reputation management — push the results about you that you control.", t: "Service" },
+
+  /* ---- metadata & privacy tools ---- */
+  { n: "ExifTool", u: "https://exiftool.org/", c: "meta", d: "Read and strip EXIF/GPS/camera metadata from any file.", t: "Win · Mac · Lin", e: true },
+  { n: "mat2", u: "https://0xacab.org/jvoisin/mat2", c: "meta", d: "CLI metadata scrubber with a GNOME integration.", t: "Lin" },
+  { n: "ImageOptim", u: "https://imageoptim.com/", c: "meta", d: "Mac app that strips metadata while compressing images.", t: "Mac" },
+  { n: "FFmpeg", u: "https://ffmpeg.org/", c: "meta", d: "Strip metadata and re-encode media with full control.", t: "Win · Mac · Lin" },
+  { n: "Photo Exif Editor", u: "https://play.google.com/store/apps/details?id=com.rtst", c: "meta", d: "View and wipe EXIF before you post from Android.", t: "Android" },
+
+  /* ---- encrypted storage & backups ---- */
+  { n: "Cryptomator", u: "https://cryptomator.org/", c: "storage", d: "Client-side encryption on top of any cloud (Drive, Dropbox).", t: "Win · Mac · Lin · iOS · And", e: true },
+  { n: "VeraCrypt", u: "https://veracrypt.fr/", c: "storage", d: "Full-disk and container encryption — the gold standard.", t: "Win · Mac · Lin", e: true },
+  { n: "Proton Drive", u: "https://proton.me/drive", c: "storage", d: "E2EE cloud storage with zero-access encryption.", t: "Web · iOS · And" },
+  { n: "Tresorit", u: "https://tresorit.com/", c: "storage", d: "Swiss E2EE cloud storage aimed at businesses.", t: "Win · Mac · iOS · And · Web" },
+  { n: "Syncthing", u: "https://syncthing.net/", c: "storage", d: "Peer-to-peer sync between your own devices — no cloud at all.", t: "Win · Mac · Lin · And" },
+  { n: "Restic", u: "https://restic.net/", c: "storage", d: "Fast, encrypted, deduplicated backups to any destination.", t: "Win · Mac · Lin" },
+  { n: "BorgBackup", u: "https://www.borgbackup.org/", c: "storage", d: "Deduplicating encrypted backups with append-only logs.", t: "Lin · Mac" },
+
+  /* ---- phone hardening ---- */
+  { n: "GrapheneOS", u: "https://grapheneos.org/", c: "phone", d: "Hardened Android with no Google services. The gold standard for Pixel.", t: "Google Pixel", e: true },
+  { n: "CalyxOS", u: "https://calyxos.org/", c: "phone", d: "Privacy-focused Android with the microG option.", t: "Pixel" },
+  { n: "NetGuard", u: "https://www.netguard.me/", c: "phone", d: "Per-app firewall without root — block everything you don't need.", t: "Android", e: true },
+  { n: "TrackerControl", u: "https://trackercontrol.org/", c: "phone", d: "Block and observe trackers inside your installed apps.", t: "Android" },
+  { n: "Shelter", u: "https://gitea.cellular.europe.fynu.com/04-Typo/untitled-gaming-hub/src/branch/master/app/src", c: "phone", d: "Sandbox apps into a work profile so they can't see each other.", t: "Android" },
+  { n: "Aurora Store", u: "https://auroraoss.com/", c: "phone", d: "Anonymous access to the Play catalog without a Google account.", t: "Android" },
+  { n: "F-Droid", u: "https://f-droid.org/", c: "phone", d: "App store of only free and open-source software.", t: "Android", e: true },
+  { n: "AdAway", u: "https://adaway.org/", c: "phone", d: "Hosts-file ad blocking on rooted Android.", t: "Android (root)" },
+  { n: "iOS Lockdown Mode", u: "https://support.apple.com/guide/iphone/iphd16102c88/", c: "phone", d: "Apple's extreme-hardening mode — switch it on for high-risk profiles.", t: "iOS" },
+
+  /* ---- network monitoring ---- */
+  { n: "Wireshark", u: "https://www.wireshark.org/", c: "network", d: "The packet analyzer — see exactly what leaves your machine.", t: "Win · Mac · Lin", e: true },
+  { n: "Portmaster", u: "https://safing.io/", c: "network", d: "Open-source firewall that shows every app's connections in real time.", t: "Win · Lin" },
+  { n: "OpenSnitch", u: "https://github.com/evilsocket/opensnitch", c: "network", d: "Interactive per-application firewall for Linux.", t: "Lin" },
+  { n: "Little Snitch", u: "https://www.obdev.at/products/littlesnitch/", c: "network", d: "Mac firewall that alerts on every outbound connection.", t: "Mac" },
+  { n: "GlassWire", u: "https://www.glasswire.com/", c: "network", d: "Network monitor with bandwidth graphs and alerts.", t: "Win · And" },
+  { n: "Nmap", u: "https://nmap.org/", c: "network", d: "Port scanning and network discovery for auditing your own setup.", t: "Win · Mac · Lin" },
+
+  /* ---- secure file sharing ---- */
+  { n: "OnionShare", u: "https://onionshare.org/", c: "share", d: "Share files over an anonymous Tor service — server-less and ephemeral.", t: "Win · Mac · Lin", e: true },
+  { n: "Magic Wormhole", u: "https://github.com/magic-wormhole/magic-wormhole", c: "share", d: "Send files directly peer-to-peer with a short code.", t: "Win · Mac · Lin" },
+  { n: "croc", u: "https://github.com/schollz/croc", c: "share", d: "Secure peer-to-peer file transfer over a relay.", t: "Win · Mac · Lin" },
+  { n: "Firefox Send (decommissioned)", u: "https://send.vis.ee/", c: "share", d: "Unofficial resurrection of E2EE self-destructing file sharing.", t: "Web" },
+
+  /* ---- OSINT & recon ---- */
+  { n: "Maltego", u: "https://www.maltego.com/", c: "osint", d: "Visual link analysis across people, domains, IPs and orgs.", t: "Win · Mac · Lin" },
+  { n: "SpiderFoot", u: "https://www.spiderfoot.net/", c: "osint", d: "Automated OSINT collection across 200+ modules.", t: "Web · Server" },
+  { n: "Recon-ng", u: "https://github.com/lanmaster53/recon-ng", c: "osint", d: "Modular reconnaissance framework with a Metasploit-style console.", t: "Lin" },
+  { n: "theHarvester", u: "https://github.com/laramies/theHarvester", c: "osint", d: "Email, domain and employee reconnaissance from public sources.", t: "Lin" },
+  { n: "Amass", u: "https://github.com/owasp-amass/amass", c: "osint", d: "OWASP attack-surface mapping — subdomains, certs, ASNs.", t: "Win · Mac · Lin" },
+  { n: "Sublist3r", u: "https://github.com/aboul3la/Sublist3r", c: "osint", d: "Fast subdomain enumeration using many public sources.", t: "Lin" },
+  { n: "Shodan", u: "https://www.shodan.io/", c: "osint", d: "Search the entire internet of exposed devices and services.", t: "Web · API" },
+  { n: "Hunchly", u: "https://www.hunch.ly/", c: "osint", d: "Capture and archive every page you visit for later evidence.", t: "Win · Mac" },
+
+  /* ---- private search engines ---- */
+  { n: "DuckDuckGo", u: "https://duckduckgo.com/", c: "search", d: "No-tracker search with its own independent index.", t: "Web", e: true },
+  { n: "Startpage", u: "https://www.startpage.com/", c: "search", d: "Google-grade results without Google tracking.", t: "Web" },
+  { n: "SearXNG", u: "https://github.com/searxng/searxng", c: "search", d: "Self-hosted metasearch across dozens of engines — no logs.", t: "Server · Docker" },
+  { n: "Brave Search", u: "https://search.brave.com/", c: "search", d: "Independent index with an anonymous option.", t: "Web" },
+  { n: "Mojeek", u: "https://www.mojeek.com/", c: "search", d: "Fully independent crawler, no results from Google/Bing.", t: "Web" },
+
+  /* ---- guides & checklists ---- */
+  { n: "Privacy Guides", u: "https://www.privacyguides.org/", c: "guides", d: "The definitive, no-hype privacy tool recommendations.", t: "Web", e: true },
+  { n: "EFF Surveillance Self-Defense", u: "https://ssd.eff.org/", c: "guides", d: "Threat-modeling and defense guides from the EFF.", t: "Web", e: true },
+  { n: "EFF Cover Your Tracks", u: "https://coveryourtracks.eff.org/", c: "guides", d: "Test how trackable your browser fingerprint actually is.", t: "Web", e: true },
+  { n: "Tor Project", u: "https://www.torproject.org/", c: "guides", d: "The onion routing network — documentation and safety guides.", t: "Web" },
+  { n: "PRISM Break", u: "https://prism-break.org/", c: "guides", d: "Alternative-software directory organized by what it replaces.", t: "Web" },
+  { n: "OWASP MASVS", u: "https://mas.owasp.org/", c: "guides", d: "Mobile app security verification standard — harden your own apps.", t: "Web" },
+
+  /* ---- physical OPSEC ---- */
+  { n: "Faraday bag", u: "https://www.amazon.com/s?k=faraday+bag+phone", c: "hardware", d: "Signal-isolated sleeve for phone/laptop — kills cellular, Wi-Fi, NFC.", t: "Carry item" },
+  { n: "YubiKey / Nitrokey", u: "https://www.yubico.com/", c: "hardware", d: "Keep your hardware keys separate from your devices.", t: "Carry item" },
+  { n: "Camera & mic covers", u: "https://www.amazon.com/s?k=laptop+webcam+cover", c: "hardware", d: "Physical camera/mic covers — the only 100% effective disable.", t: "Carry item" },
+  { n: "Privacy screen filter", u: "https://www.amazon.com/s?k=privacy+screen+filter", c: "hardware", d: "Limits screen viewing angle on transit and in offices.", t: "Carry item" },
+  { n: "USB data blocker", u: "https://www.amazon.com/s?k=usb+data+blocker+charge+only", c: "hardware", d: "Charge from unknown ports without data connectivity.", t: "Carry item" },
+  { n: "Signal-muting device pouch", u: "https://www.amazon.com/s?k=signal+blocking+device+pouch", c: "hardware", d: "Faraday pouch for meeting-time isolation of phones.", t: "Carry item" },
+];
+
+function renderDownloads() {
+  setPageTitle("Downloads");
+  setStatus("ok");
+  const view = document.getElementById("page-view");
+  view.classList.remove("hidden");
+  view.innerHTML = "";
+  const frag = document.createDocumentFragment();
+
+  const hero = el("div", "page-hero");
+  const pageIco = el("div", "page-ico");
+  pageIco.innerHTML = svg("download");
+  hero.appendChild(pageIco);
+  const heroText = el("div");
+  heroText.appendChild(el("h1", null, "Downloads & Tools"));
+  heroText.appendChild(el("p", null, "Everything to install, run and carry to stay untrackable — " + DOWNLOADS.length + " tools across browsers, VPNs, EDR, broker removal, encrypted storage and physical OPSEC."));
+  hero.appendChild(heroText);
+  frag.appendChild(hero);
+
+  const bar = el("div", "d-bar");
+  const search = el("input", "q d-search");
+  search.type = "search";
+  search.placeholder = "Search " + DOWNLOADS.length + " tools…";
+  search.autocomplete = "off";
+  search.spellcheck = false;
+  bar.appendChild(search);
+
+  const chips = el("div", "d-chips");
+  const all = el("button", "chip active", "All");
+  chips.appendChild(all);
+  for (const [id, label] of DOWNLOAD_CATS) {
+    const b = el("button", "chip", label);
+    b.dataset.cat = id;
+    b.addEventListener("click", () => {
+      chips.querySelectorAll(".chip").forEach((x) => x.classList.toggle("active", x === b));
+      renderGrid();
+    });
+    chips.appendChild(b);
+  }
+  bar.appendChild(chips);
+  frag.appendChild(bar);
+
+  const grid = el("div", "d-grid");
+  frag.appendChild(grid);
+  view.appendChild(frag);
+  view.scrollTop = 0;
+
+  function renderGrid() {
+    const activeCat = (chips.querySelector(".chip.active") || all).dataset.cat || "all";
+    const term = search.value.trim().toLowerCase();
+    grid.innerHTML = "";
+    let count = 0;
+    for (const [catId, catLabel, icon] of DOWNLOAD_CATS) {
+      if (activeCat !== "all" && activeCat !== catId) continue;
+      const items = DOWNLOADS.filter((it) => {
+        if (it.c !== catId) return false;
+        if (!term) return true;
+        return (it.n + " " + it.d + " " + (it.t || "")).toLowerCase().includes(term);
+      });
+      if (!items.length) continue;
+      const sec = el("section", "d-cat");
+      const head = el("div", "d-cat-head");
+      const ic = el("span", "d-cat-ico");
+      ic.innerHTML = svg(icon);
+      head.appendChild(ic);
+      head.appendChild(el("h2", null, catLabel));
+      head.appendChild(el("span", "d-count", items.length + " tools"));
+      sec.appendChild(head);
+      for (const it of items) {
+        const a = el("a", "d-item" + (it.e ? " essential" : ""), "");
+        a.href = it.u;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        const name = el("div", "d-name");
+        name.appendChild(el("strong", null, it.n));
+        if (it.e) name.appendChild(el("span", "d-badge", "essential"));
+        a.appendChild(name);
+        a.appendChild(el("div", "d-desc", it.d));
+        if (it.t) a.appendChild(el("div", "d-tags", it.t));
+        const arrow = el("span", "ext-arrow");
+        arrow.innerHTML = svg("arrow");
+        a.appendChild(arrow);
+        sec.appendChild(a);
+        count++;
+      }
+      grid.appendChild(sec);
+    }
+    if (!count) grid.appendChild(el("div", "state", "No matches."));
+  }
+
+  search.addEventListener("input", renderGrid);
+  renderGrid();
+}
+
+/* ================================================================
    Animated cursor
    ================================================================ */
 
@@ -596,7 +890,7 @@ crumbHome.addEventListener("click", () => renderHome());
 document.addEventListener("keydown", (ev) => {
   if (ev.target && /INPUT|TEXTAREA|SELECT/.test(ev.target.tagName)) return;
   if (ev.key === "Escape") { closeSidebar(); return; }
-  if (ev.key === "1" || ev.key === "2" || ev.key === "3" || ev.key === "4") {
+  if (ev.key === "1" || ev.key === "2" || ev.key === "3" || ev.key === "4" || ev.key === "5") {
     ev.preventDefault();
     switchPage(Number(ev.key));
   }
@@ -663,6 +957,7 @@ function renderHome() {
     ["learn", "Field Manual", "OPSEC · OSINT · CSINT · EDR · doxing · threat modeling", "2", "book"],
     ["protect", "Hardening Guide", "Attack surface · lock down · remove data · clear your name", "3", "shield"],
     ["settings", "Settings", "Themes · smoothness · cursor · profile", "4", "gear"],
+    ["downloads", "Downloads & Tools", "Install & harden — VPNs, EDR, broker removal, encrypted storage", "5", "download"],
   ];
   for (const [id, title, desc, tag, icon] of pages) {
     const c = el("button", "home-card page-card");
@@ -1193,6 +1488,10 @@ function switchPage(n) {
   document.querySelectorAll(".tool").forEach((s) => s.classList.add("hidden"));
   if (n === 4) {
     renderSettings();
+    return;
+  }
+  if (n === 5) {
+    renderDownloads();
     return;
   }
   renderPage(n === 2 ? "learn" : "protect");
