@@ -73,6 +73,14 @@
 
   <!-- ================= APP VIEW ================= -->
   <div id="app-view" class="app hidden">
+    <div class="scrim" id="scrim"></div>
+
+    <div id="boot-load" class="boot-load hidden">
+      <div class="boot-brand">L</div>
+      <div class="load-bar"><span></span></div>
+      <div class="boot-msg" id="boot-msg">Booting toolkit…</div>
+    </div>
+
     <aside class="sidebar" id="sidebar">
       <div class="brand">
         <div class="brand-mark">L</div>
@@ -90,10 +98,19 @@
 
     <main class="content">
       <header class="page-head">
+        <button id="menu-btn" class="menu-btn" title="Toggle sidebar" aria-label="Toggle sidebar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="17" x2="20" y2="17"></line></svg>
+        </button>
         <div class="crumbs">
-          <span class="c-home">L</span>
+          <span class="c-home" id="crumb-home">L</span>
           <span class="c-sep">/</span>
-          <span class="c-here" id="page-title">Email lookup</span>
+          <span class="c-here" id="page-title">Home</span>
+        </div>
+        <div class="pager">
+          <button data-page="1" class="active" title="Tools &amp; resources">1</button>
+          <button data-page="2" title="Field Manual — learn OPSEC, OSINT, CSINT, EDR, doxing">2</button>
+          <button data-page="3" title="Hardening Guide — protect yourself, clear your name">3</button>
+          <button data-page="4" title="Settings — themes, smoothness, profile">4</button>
         </div>
         <div class="status" id="page-status">
           <span class="dot"></span>

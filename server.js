@@ -272,6 +272,41 @@ app.get("/api/auth/me", async (req, res) => {
   res.json({ ok: true, email: sess.email });
 });
 
+app.post("/api/auth/change-password", requireAuth, async (req, res) => {
+  const current = String((req.body && req.body.current) || "");
+  const next = String((req.body && req.body.next) || "");
+  if (current.length < 8 || next.length < 8) {
+    return fail(res, 400, "Password must be at least 8 characters.");
+  }
+  if (current === next) return fail(res, 400, "New password must be different.");
+
+  const user = db.getUser(req.user);
+  if (!user) return fail(res, 404, "Account not found.");
+  const ok = await verifyPassword(current, user.passwordHash);
+  if (!ok) return fail(res, 401, "Current password is incorrect.");
+
+  const passwordHash = await hashPassword(next);
+  await db.updatePassword(req.user, passwordHash);
+  res.json({ ok: true });
+});
+
+app.post("/api/auth/change-email", requireAuth, async (req, res) => {
+  const newEmail = String((req.body && req.body.newEmail) || "").trim().toLowerCase();
+  const password = String((req.body && req.body.password) || "");
+  if (!EMAIL_RE.test(newEmail)) return fail(res, 400, "Enter a valid new email address.");
+  if (newEmail === req.user) return fail(res, 400, "That's already your email.");
+  if (!password) return fail(res, 400, "Enter your password to confirm.");
+
+  const user = db.getUser(req.user);
+  if (!user) return fail(res, 404, "Account not found.");
+  const ok = await verifyPassword(password, user.passwordHash);
+  if (!ok) return fail(res, 401, "Password is incorrect.");
+
+  if (db.userExists(newEmail)) return fail(res, 409, "An account with that email already exists.");
+  await db.updateEmail(req.user, newEmail);
+  res.json({ ok: true, email: newEmail });
+});
+
 /* ------------------------------------------------------------------ */
 /* Email lookup                                                        */
 /* ------------------------------------------------------------------ */
