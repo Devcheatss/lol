@@ -22,11 +22,14 @@ try {
 
 const db = require("./lib/db");
 const mailer = require("./lib/mailer");
+const tools = require("./lib/tools");
+const chat = require("./lib/chat");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const HIBP_API_KEY = process.env.HIBP_API_KEY || "";
-const RATE_LIMIT = Number(process.env.RATE_LIMIT) || 60;
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || "";
+const RATE_LIMIT = Number(process.env.RATE_LIMIT) || 240;
 const RATE_WINDOW_MS = Number(process.env.RATE_WINDOW_MS) || 10 * 60 * 1000;
 
 app.disable("x-powered-by");
@@ -389,17 +392,7 @@ app.get("/api/dns/:domain", requireAuth, async (req, res) => {
   const domain = cleanDomain(req.params.domain);
   if (!DOMAIN_RE.test(domain)) return fail(res, 400, "Invalid domain name.");
 
-  const checks = {
-    A: (d) => dns.resolve4(d, { ttl: true }),
-    AAAA: (d) => dns.resolve6(d, { ttl: true }),
-    CNAME: (d) => dns.resolveCname(d),
-    MX: (d) => dns.resolveMx(d),
-    NS: (d) => dns.resolveNs(d),
-    TXT: (d) => dns.resolveTxt(d),
-    SOA: (d) => dns.resolveSoa(d),
-    CAA: (d) => dns.resolveCaa(d),
-    SRV: (d) => dns.resolveSrv("_services._tcp." + d),
-  };
+  const checks = tools.DNS_CHECKS;
 
   const out = {};
   await Promise.all(
@@ -542,29 +535,7 @@ app.get("/api/subdomains/:domain", requireAuth, async (req, res) => {
 /* Username search                                                     */
 /* ------------------------------------------------------------------ */
 
-const PLATFORMS = [
-  ["GitHub", "https://github.com/", "https://github.com/{u}", true],
-  ["GitLab", "https://gitlab.com/", "https://gitlab.com/{u}", true],
-  ["Dev.to", "https://dev.to", "https://dev.to/{u}", true],
-  ["Keybase", "https://keybase.io", "https://keybase.io/{u}", true],
-  ["YouTube", "https://www.youtube.com", "https://www.youtube.com/@{u}", true],
-  ["Vimeo", "https://vimeo.com", "https://vimeo.com/{u}", true],
-  ["Behance", "https://www.behance.net", "https://www.behance.net/{u}", true],
-  ["Dribbble", "https://dribbble.com", "https://dribbble.com/{u}", true],
-  ["Flickr", "https://www.flickr.com", "https://www.flickr.com/people/{u}", true],
-  ["Patreon", "https://www.patreon.com", "https://www.patreon.com/{u}", true],
-  ["Replit", "https://replit.com", "https://replit.com/@{u}", true],
-  ["Reddit", "https://www.reddit.com", "https://www.reddit.com/user/{u}", false],
-  ["Telegram", "https://t.me", "https://t.me/{u}", false],
-  ["Pinterest", "https://www.pinterest.com", "https://www.pinterest.com/{u}", false],
-  ["Twitch", "https://www.twitch.tv", "https://www.twitch.tv/{u}", false],
-  ["Steam", "https://steamcommunity.com", "https://steamcommunity.com/id/{u}", false],
-  ["Bitbucket", "https://bitbucket.org", "https://bitbucket.org/{u}", false],
-  ["Wordpress", "https://wordpress.com", "https://{u}.wordpress.com", false],
-  ["HackerNews", "https://news.ycombinator.com", "https://news.ycombinator.com/user?id={u}", false],
-  ["Medium", "https://medium.com", "https://medium.com/@{u}", false],
-  ["VK", "https://vk.com", "https://vk.com/{u}", false],
-];
+const PLATFORMS = tools.PLATFORMS;
 
 app.get("/api/username/:username", requireAuth, async (req, res) => {
   const username = String(req.params.username).trim();
@@ -967,6 +938,201 @@ app.get("/api/phone", requireAuth, async (req, res) => {
   }
 
   res.json({ ok: true, data });
+});
+
+/* ------------------------------------------------------------------ */
+
+/* ------------------------------------------------------------------ */
+/* Port scanner                                                         */
+/* ------------------------------------------------------------------ */
+
+app.get("/api/port", requireAuth, async (req, res) => {
+  let host = String(req.query.host || "").trim();
+  if (!host) return fail(res, 400, "Missing host parameter (?host=...)");
+  host = cleanDomain(host);
+  if (!tools.DOMAIN_RE.test(host) && !tools.isIPv4(host) && !tools.isIPv6(host)) {
+    return fail(res, 400, "Invalid host.");
+  }
+  let custom = [];
+  const ports = String(req.query.ports || "").trim();
+  if (ports) {
+    custom = ports.split(/[,\s]+/).map(Number).filter((n) => n >= 1 && n <= 65535);
+    if (!custom.length) return fail(res, 400, "Invalid ports (?ports=22,80,443).");
+  }
+  try {
+    const data = await tools.scanPorts(host, custom);
+    res.json({ ok: true, data });
+  } catch (err) {
+    res.status(502).json({ ok: false, error: "Port scan failed", detail: err.message });
+  }
+});
+
+/* ------------------------------------------------------------------ */
+/* TLS certificate                                                      */
+/* ------------------------------------------------------------------ */
+
+app.get("/api/cert", requireAuth, async (req, res) => {
+  let host = String(req.query.host || "").trim();
+  if (!host) return fail(res, 400, "Missing host parameter (?host=...)");
+  host = tools.cleanDomain(host);
+  if (!tools.DOMAIN_RE.test(host)) return fail(res, 400, "Invalid host.");
+  try {
+    const data = await tools.getCert(host);
+    res.json({ ok: true, data });
+  } catch (err) {
+    res.status(502).json({ ok: false, error: "Certificate lookup failed", detail: err.message });
+  }
+});
+
+/* ------------------------------------------------------------------ */
+/* Wayback Machine snapshots                                            */
+/* ------------------------------------------------------------------ */
+
+app.get("/api/wayback", requireAuth, async (req, res) => {
+  const url = String(req.query.url || "").trim();
+  if (!url) return fail(res, 400, "Missing url parameter (?url=...)");
+  try {
+    const data = await tools.wayback(url);
+    res.json({ ok: true, data });
+  } catch (err) {
+    res.status(502).json({ ok: false, error: "Wayback lookup failed", detail: err.message });
+  }
+});
+
+/* ------------------------------------------------------------------ */
+/* Breach checks                                                        */
+/* ------------------------------------------------------------------ */
+
+app.get("/api/breach", requireAuth, async (req, res) => {
+  const email = String(req.query.email || "").trim().toLowerCase();
+  if (!EMAIL_RE.test(email)) return fail(res, 400, "Invalid email address.");
+  try {
+    res.json({ ok: true, data: await tools.checkEmailBreaches(email) });
+  } catch (err) {
+    res.status(502).json({ ok: false, error: "Breach lookup failed", detail: err.message });
+  }
+});
+
+app.get("/api/pwned", requireAuth, async (req, res) => {
+  const password = String(req.query.p || "");
+  if (!password) return fail(res, 400, "Missing password parameter (?p=...)");
+  if (password.length > 128) return fail(res, 400, "Password too long.");
+  try {
+    res.json({ ok: true, data: await tools.pwnedPassword(password) });
+  } catch (err) {
+    res.status(502).json({ ok: false, error: "Pwned Passwords lookup failed", detail: err.message });
+  }
+});
+
+/* ------------------------------------------------------------------ */
+/* Crypto wallet                                                        */
+/* ------------------------------------------------------------------ */
+
+app.get("/api/wallet", requireAuth, async (req, res) => {
+  const coin = String(req.query.coin || "btc").toLowerCase();
+  const address = String(req.query.addr || "").trim();
+  if (!address) return fail(res, 400, "Missing address parameter (?coin=btc&addr=...).");
+  try {
+    res.json({ ok: true, data: await tools.walletLookup(coin, address) });
+  } catch (err) {
+    res.status(502).json({ ok: false, error: "Wallet lookup failed", detail: err.message });
+  }
+});
+
+/* ------------------------------------------------------------------ */
+/* Batch lookups                                                        */
+/* ------------------------------------------------------------------ */
+
+app.post("/api/batch", requireAuth, async (req, res) => {
+  const tool = String((req.body && req.body.tool) || "");
+  const items = Array.isArray(req.body && req.body.items) ? req.body.items : [];
+  if (!tool) return fail(res, 400, "Missing tool parameter.");
+  if (!items.length) return fail(res, 400, "No items provided.");
+  if (items.length > 100) return fail(res, 400, "Batch limited to 100 items.");
+  try {
+    const data = await tools.batchRunner(tool, items.slice(0, 100));
+    res.json({ ok: true, data });
+  } catch (err) {
+    res.status(502).json({ ok: false, error: "Batch lookup failed", detail: err.message });
+  }
+});
+
+/* ------------------------------------------------------------------ */
+/* Investigations (saved cases)                                         */
+/* ------------------------------------------------------------------ */
+
+app.get("/api/investigations", requireAuth, (req, res) => {
+  res.json({ ok: true, data: db.getInvestigations(req.user) });
+});
+
+app.post("/api/investigations", requireAuth, async (req, res) => {
+  const body = (req.body && req.body.data) || req.body || {};
+  const inv = await db.createInvestigation(req.user, {
+    title: body.title,
+    target: body.target,
+    status: body.status,
+    tags: body.tags,
+    notes: body.notes,
+  });
+  res.json({ ok: true, data: inv });
+});
+
+app.patch("/api/investigations/:id", requireAuth, async (req, res) => {
+  const body = (req.body && req.body.data) || req.body || {};
+  const inv = await db.updateInvestigation(req.user, req.params.id, body);
+  if (!inv) return fail(res, 404, "Investigation not found.");
+  res.json({ ok: true, data: inv });
+});
+
+app.post("/api/investigations/:id/entries", requireAuth, async (req, res) => {
+  const body = (req.body && req.body.data) || req.body || {};
+  const inv = await db.addInvestigationEntry(req.user, req.params.id, {
+    tool: body.tool,
+    query: body.query,
+    data: body.data,
+  });
+  if (!inv) return fail(res, 404, "Investigation not found.");
+  res.json({ ok: true, data: inv });
+});
+
+app.delete("/api/investigations/:id/entries/:idx", requireAuth, async (req, res) => {
+  const inv = await db.removeInvestigationEntry(req.user, req.params.id, req.params.idx);
+  if (!inv) return fail(res, 404, "Investigation not found.");
+  res.json({ ok: true, data: inv });
+});
+
+app.delete("/api/investigations/:id", requireAuth, async (req, res) => {
+  const ok = await db.deleteInvestigation(req.user, req.params.id);
+  if (!ok) return fail(res, 404, "Investigation not found.");
+  res.json({ ok: true });
+});
+
+/* ------------------------------------------------------------------ */
+/* AI assistant (DeepSeek)                                              */
+/* ------------------------------------------------------------------ */
+
+app.get("/api/chat/status", requireAuth, (req, res) => {
+  res.json({ ok: true, configured: Boolean(DEEPSEEK_API_KEY) });
+});
+
+app.post("/api/chat", requireAuth, async (req, res) => {
+  if (!DEEPSEEK_API_KEY) {
+    return fail(res, 503, "AI is not configured on this server. Set the DEEPSEEK_API_KEY environment variable.");
+  }
+  const messages = Array.isArray(req.body && req.body.messages) ? req.body.messages : [];
+  if (!messages.length) return fail(res, 400, "No messages provided.");
+  for (const m of messages) {
+    if (!m || (m.role !== "user" && m.role !== "assistant") || typeof m.content !== "string") {
+      return fail(res, 400, "Invalid message format.");
+    }
+    if (m.content.length > 8000) return fail(res, 400, "Message too long.");
+  }
+  try {
+    const out = await chat.runChat(DEEPSEEK_API_KEY, messages);
+    res.json({ ok: true, ...out });
+  } catch (err) {
+    res.status(502).json({ ok: false, error: "AI request failed", detail: err.message });
+  }
 });
 
 /* ------------------------------------------------------------------ */

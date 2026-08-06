@@ -17,6 +17,18 @@ const TOOLS = [
   { id: "cidr", icon: "calc", title: "CIDR calculator", desc: "Calculate network range, usable hosts and an address sample for a CIDR block.", ph: "192.168.0.0/24", ep: "/api/cidr?cidr={q}", render: renderCidr },
   { id: "search", icon: "search", title: "Web search", desc: "Run a search term across many OSINT-friendly search engines.", ph: "\"someone@example.com\"", ep: "/api/search?q={q}", render: renderSearch },
   { id: "phone", icon: "phone", title: "Phone lookup", desc: "Parse an international phone number, country, and optional carrier info.", ph: "+14155552671", ep: "/api/phone?n={q}", render: renderPhone },
+  { id: "breach", icon: "alert", title: "Breach checker", desc: "Check whether an email address appears in known data breaches.", ph: "someone@example.com", ep: "/api/breach?email={q}", render: renderBreach },
+  { id: "pwned", icon: "lock", title: "Password checker", desc: "Safely check a password against breach corpora (k-anonymity — your password never leaves, only its hash prefix).", ph: "enter a password to test", ep: "/api/pwned?p={q}", render: renderPwned },
+  { id: "cert", icon: "scan", title: "SSL cert viewer", desc: "Fetch and decode the live TLS certificate of a host.", ph: "example.com", ep: "/api/cert?host={q}", render: renderCert },
+  { id: "port", icon: "network", title: "Port scanner", desc: "Quick TCP scan of a host's common ports (open / filtered / closed).", ph: "example.com", ep: "/api/port?host={q}", render: renderPort },
+  { id: "wayback", icon: "archive", title: "Wayback snapshots", desc: "Find archived copies of a URL in the Internet Archive.", ph: "https://example.com/page", ep: "/api/wayback?url={q}", render: renderWayback },
+  { id: "wallet", icon: "wallet", title: "Crypto wallet", desc: "Check a BTC or ETH address balance and transaction count.", ph: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa", custom: true, build: buildWallet },
+  { id: "batch", icon: "list", title: "Batch lookup", desc: "Run a list of emails, IPs, domains or usernames through one tool at once.", ph: "paste many lines…", custom: true, build: buildBatch },
+  { id: "metadata", icon: "image", title: "Metadata / EXIF", desc: "Upload a photo and read EXIF + GPS data locally in your browser.", ph: "upload an image", custom: true, build: buildMetadata },
+  { id: "hashfile", icon: "hash", title: "File hasher", desc: "Compute MD5, SHA-1, SHA-256/384/512 of a file locally in your browser.", ph: "upload a file", custom: true, build: buildFileHash },
+  { id: "dorks", icon: "code", title: "Google dork builder", desc: "Build advanced search operators and open them in any search engine.", ph: "build a dork", custom: true, build: buildDorks },
+  { id: "image", icon: "camera", title: "Reverse image search", desc: "Find where an image appears using Yandex, Google, Bing and Tineye.", ph: "image URL", custom: true, build: buildReverseImage },
+  { id: "report", icon: "printer", title: "Report generator", desc: "Run every relevant lookup on a target and produce a printable report.", ph: "target domain or email", custom: true, build: buildReport },
 ];
 
 /* ================================================================
@@ -73,6 +85,19 @@ const ICONS = {
   palette: '<circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.92 0 1.67-.75 1.67-1.67 0-.44-.18-.83-.43-1.13-.27-.3-.44-.7-.44-1.12 0-.9.73-1.67 1.67-1.67H17a4.33 4.33 0 0 0 4.33-4.33C21.33 6.16 17.16 2 12 2z"/>',
   download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
   star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+  list: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
+  upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
+  scan: '<path d="M12 11c0 4-2 8-2 8"/><path d="M8 8a4 4 0 0 1 8 0c0 2-1 4-1 6"/><path d="M5 7a7 7 0 0 1 14 0c0 4-1 8-1 11"/><path d="M2 11c0-5 4-9 10-9s10 4 10 9c0 4-1 7-1 10"/>',
+  printer: '<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>',
+  folder: '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>',
+  send: '<line x1="22" x2="11" y1="2" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>',
+  sparkles: '<path d="m12 3-1.9 5.8L4.3 10.7l5.8 1.9L12 18l1.9-5.4 5.8-1.9-5.8-1.9z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/>',
+  wallet: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="16" cy="15" r="1.2"/>',
+  copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  refresh: '<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>',
+  trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  plus: '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+  bot: '<rect x="3" y="8" width="18" height="12" rx="2"/><path d="M12 8V5"/><circle cx="12" cy="4" r="1"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/>',
   key: '<path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>',
 };
 
@@ -889,8 +914,13 @@ crumbHome.addEventListener("click", () => renderHome());
 
 document.addEventListener("keydown", (ev) => {
   if (ev.target && /INPUT|TEXTAREA|SELECT/.test(ev.target.tagName)) return;
-  if (ev.key === "Escape") { closeSidebar(); return; }
-  if (ev.key === "1" || ev.key === "2" || ev.key === "3" || ev.key === "4" || ev.key === "5") {
+  if (ev.key === "Escape") { closeSidebar(); closePalette(); return; }
+  if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "k") {
+    ev.preventDefault();
+    openPalette();
+    return;
+  }
+  if (ev.key === "1" || ev.key === "2" || ev.key === "3" || ev.key === "4" || ev.key === "5" || ev.key === "6" || ev.key === "7") {
     ev.preventDefault();
     switchPage(Number(ev.key));
   }
@@ -958,6 +988,8 @@ function renderHome() {
     ["protect", "Hardening Guide", "Attack surface · lock down · remove data · clear your name", "3", "shield"],
     ["settings", "Settings", "Themes · smoothness · cursor · profile", "4", "gear"],
     ["downloads", "Downloads & Tools", "Install & harden — VPNs, EDR, broker removal, encrypted storage", "5", "download"],
+    ["investigations", "Investigations", "Saved cases — targets, notes, and results over time", "6", "folder"],
+    ["ai", "AI Assistant", "DeepSeek copilot — runs every lookup and interprets results", "7", "sparkles"],
   ];
   for (const [id, title, desc, tag, icon] of pages) {
     const c = el("button", "home-card page-card");
@@ -975,6 +1007,7 @@ function renderHome() {
 
 function makeTyped(input) {
   if (!input || input.dataset.typed) return;
+  if (input.classList && input.classList.contains("pal-input")) return;
   input.dataset.typed = "1";
 
   const wrap = document.createElement("div");
@@ -1102,6 +1135,7 @@ function showApp(email) {
     setPageActive(1);
     renderHome();
     toast("Welcome back, " + email, "ok");
+    processDeepLink();
   });
 }
 
@@ -1305,18 +1339,23 @@ function buildShell() {
 
     const section = el("section", "tool" + (i === 0 ? "" : " hidden"));
     section.id = "tool-" + t.id;
-    section.innerHTML =
-      `<h2><span class="ico">${svg(t.icon)}</span>${t.title}</h2>` +
-      `<p class="desc">${t.desc}</p>` +
-      `<form class="qform"><input class="q" type="text" placeholder="${t.ph}" autocomplete="off" spellcheck="false" /><button class="go" type="submit">Run</button></form>` +
-      `<div class="results"></div>` +
-      `<div class="related"></div>`;
+    if (t.custom) {
+      section.innerHTML = `<h2><span class="ico">${svg(t.icon)}</span>${t.title}</h2><p class="desc">${t.desc}</p><div class="results"></div>`;
+      if (t.build) t.build(section);
+    } else {
+      section.innerHTML =
+        `<h2><span class="ico">${svg(t.icon)}</span>${t.title}</h2>` +
+        `<p class="desc">${t.desc}</p>` +
+        `<form class="qform"><input class="q" type="text" placeholder="${t.ph}" autocomplete="off" spellcheck="false" /><button class="go" type="submit">Run</button></form>` +
+        `<div class="results"></div>` +
+        `<div class="related"></div>`;
+    }
 
     const related = section.querySelector(".related");
     const cats = (RELATED[t.id] || [])
       .map((name) => DIRECTORY.find((c) => c.category === name))
       .filter(Boolean);
-    if (cats.length) {
+    if (related && cats.length) {
       const rc = card("Related resources", null);
       const grid = el("div", "engine-grid");
       for (const cat of cats) {
@@ -1376,7 +1415,10 @@ function buildShell() {
         return;
       }
       setStatus("ok");
-      setResults(form, tool.render(j.data));
+      const frag = document.createDocumentFragment();
+      frag.appendChild(resultBar(tool, raw, j.data));
+      frag.appendChild(tool.render(j.data));
+      setResults(form, frag);
     } catch (err) {
       setStatus("error");
       setResults(form, stateEl("error", "Network error: " + err.message));
@@ -1492,6 +1534,14 @@ function switchPage(n) {
   }
   if (n === 5) {
     renderDownloads();
+    return;
+  }
+  if (n === 6) {
+    renderInvestigations();
+    return;
+  }
+  if (n === 7) {
+    renderAi();
     return;
   }
   renderPage(n === 2 ? "learn" : "protect");
@@ -1984,11 +2034,1119 @@ function esc(s) {
 }
 
 /* ================================================================
+   API + export + save-to-case helpers
+   ================================================================ */
+
+function downloadBlob(name, content, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+function downloadJSON(obj, name) {
+  downloadBlob(name || "l-result.json", JSON.stringify(obj, null, 2), "application/json");
+}
+
+function flattenCSV(obj, prefix) {
+  const rows = [];
+  (function walk(o, p) {
+    if (o === null || o === undefined) return;
+    if (typeof o === "object") {
+      if (Array.isArray(o)) {
+        if (o.length && typeof o[0] === "object") o.forEach((v, i) => walk(v, p + "[" + i + "]"));
+        else if (o.length) rows.push([p || "value", JSON.stringify(o)]);
+        return;
+      }
+      for (const [k, v] of Object.entries(o)) walk(v, p ? p + "." + k : k);
+      return;
+    }
+    rows.push([p || "value", String(o)]);
+  })(obj, prefix || "");
+  return rows;
+}
+
+function downloadCSV(obj, name) {
+  const csv = flattenCSV(obj)
+    .map(([k, v]) => '"' + k.replace(/"/g, '""') + '","' + String(v).replace(/"/g, '""') + '"')
+    .join("\n");
+  downloadBlob(name || "l-result.csv", csv, "text/csv");
+}
+
+async function handleResp(r) {
+  if (r.status === 401) {
+    showAuth();
+    toast("Session expired — please log in again.", "error");
+    throw new Error("Session expired");
+  }
+  const j = await r.json().catch(() => ({ ok: false, error: "Bad response" }));
+  if (!j.ok) throw new Error(j.error + (j.detail ? " — " + j.detail : ""));
+  return j.data;
+}
+
+function apiGet(url) {
+  return fetch(url).then(handleResp);
+}
+
+function apiPost(url, body) {
+  return fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(handleResp);
+}
+
+function apiPatch(url, body) {
+  return fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ data: body }) }).then(handleResp);
+}
+
+function apiDelete(url) {
+  return fetch(url, { method: "DELETE" }).then(handleResp);
+}
+
+function slug(s) {
+  return String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "result";
+}
+
+function cleanDomainLocal(s) {
+  let d = String(s).trim().toLowerCase();
+  d = d.replace(/^https?:\/\//, "").replace(/^www\./, "");
+  d = d.split(/[/?#]/)[0];
+  return d.replace(/\.$/, "");
+}
+
+let lastResult = null;
+
+async function loadInvOptions(sel) {
+  try {
+    const list = await apiGet("/api/investigations");
+    sel.innerHTML = "";
+    const o = el("option", null, "New case…");
+    o.value = "__new";
+    sel.appendChild(o);
+    for (const inv of list.slice(0, 25)) {
+      const op = el("option", null, inv.title + (inv.status !== "open" ? " [" + inv.status + "]" : ""));
+      op.value = inv.id;
+      sel.appendChild(op);
+    }
+  } catch {}
+}
+
+function resultBar(tool, raw, data) {
+  lastResult = { tool: tool.title, query: raw, data };
+  const bar = el("div", "rbar");
+
+  const g1 = el("div", "rbar-group");
+  const jsonB = el("button", "btn-ghost small", "JSON");
+  jsonB.title = "Download raw result as JSON";
+  jsonB.addEventListener("click", () => downloadJSON(data, slug(tool.id) + "-" + slug(raw) + ".json"));
+  const csvB = el("button", "btn-ghost small", "CSV");
+  csvB.title = "Download flattened result as CSV";
+  csvB.addEventListener("click", () => downloadCSV(data, slug(tool.id) + "-" + slug(raw) + ".csv"));
+  g1.appendChild(jsonB);
+  g1.appendChild(csvB);
+  bar.appendChild(g1);
+
+  const g2 = el("div", "rbar-group");
+  const sel = el("select", "rbar-sel");
+  const opt = el("option", null, "New case…");
+  opt.value = "__new";
+  sel.appendChild(opt);
+  const saveB = el("button", "btn-primary small", "Save to case");
+  saveB.addEventListener("click", async () => {
+    saveB.disabled = true;
+    try {
+      let invId = sel.value;
+      if (!invId || invId === "__new") {
+        const created = await apiPost("/api/investigations", { title: tool.title + " — " + raw, target: raw });
+        invId = created.id;
+      }
+      await apiPost("/api/investigations/" + invId + "/entries", { tool: tool.title, query: raw, data });
+      toast("Saved to case.", "ok");
+    } catch (err) {
+      toast(err.message, "error");
+    } finally {
+      saveB.disabled = false;
+    }
+  });
+  g2.appendChild(sel);
+  g2.appendChild(saveB);
+  bar.appendChild(g2);
+  loadInvOptions(sel);
+  return bar;
+}
+
+/* ================================================================
+   New tool renders (breach, pwned, cert, port, wayback, wallet)
+   ================================================================ */
+
+function renderBreach(data) {
+  const frag = document.createDocumentFragment();
+  if (data.note) frag.appendChild(stateEl("note", data.note));
+  frag.appendChild(card("Breach exposure — " + data.email, (() => {
+    if (data.breaches === null && data.breachedCount === null) return el("div", "state", "No breach data returned.");
+    if (data.breachedCount === 0) return el("div", "state", "No breaches found for this email.");
+    if (data.breaches && (data.breaches.error || data.breaches.httpStatus)) {
+      return el("div", "state error", "Lookup unavailable: " + (data.breaches.error || "HTTP " + data.breaches.httpStatus));
+    }
+    const wrap = el("div");
+    wrap.appendChild(el("div", null, "Found in " + data.breaches.length + " breach(es):"));
+    wrap.appendChild(list(data.breaches.map((b) => b.name + " (" + b.date + ") — " + b.description.split(" ").slice(0, 14).join(" ") + "…")));
+    return wrap;
+  })()));
+  return frag;
+}
+
+function renderPwned(data) {
+  const frag = document.createDocumentFragment();
+  frag.appendChild(data.pwned
+    ? stateEl("error", "This password appears " + data.count + " time(s) in known breach corpora. Change it and reuse nothing like it.")
+    : stateEl("ok", "Not found in the Pwned Passwords corpus."));
+  frag.appendChild(card("How this works", el("div", "muted", "Only the first 5 characters of the SHA-1 hash (" + data.prefix + "…) left your browser. The server compared the suffix against the range returned by haveibeenpwned.com — your password never leaves.")));
+  return frag;
+}
+
+function renderCert(data) {
+  const frag = document.createDocumentFragment();
+  const subj = data.subject || {};
+  const iss = data.issuer || {};
+  frag.appendChild(card("Certificate — " + data.host, kv([
+    ["Protocol", data.protocol],
+    ["Subject CN", subj.CN], ["Organization", subj.O], ["Country", subj.C],
+    ["Issuer CN", iss.CN], ["Issuer org", iss.O],
+    ["Valid from", data.valid_from], ["Valid to", data.valid_to],
+    ["Days remaining", data.daysRemaining === null ? null : data.daysRemaining < 0 ? data.daysRemaining + " (EXPIRED)" : data.daysRemaining],
+    ["Serial", data.serial], ["Fingerprint (SHA-256)", data.fingerprint],
+  ])));
+  if (data.subjectaltname) frag.appendChild(card("Subject Alternative Names", list(String(data.subjectaltname).split(", "))));
+  return frag;
+}
+
+function renderPort(data) {
+  const frag = document.createDocumentFragment();
+  frag.appendChild(stateEl("note", "Scanned " + data.total + " ports on " + data.host + (data.ip ? " (" + data.ip + ")" : "") + " in " + data.elapsedMs + "ms."));
+  frag.appendChild(card("Open ports (" + data.open.length + ")", data.open.length
+    ? table(["Port", "Service"], data.open.map((p) => [String(p.port), p.service]))
+    : el("div", "state", "No open ports found.")));
+  if (data.filtered.length) {
+    frag.appendChild(card("Filtered / dropped (" + data.filtered.length + ")", list(data.filtered.map((p) => p.port + " (" + p.service + ")"))));
+  }
+  if (data.closed) frag.appendChild(card("Closed", el("div", "muted", data.closed + " ports responded with connection refused.")));
+  return frag;
+}
+
+function renderWayback(data) {
+  const frag = document.createDocumentFragment();
+  frag.appendChild(stateEl("note", data.count + " archived snapshot(s) found for " + data.url + "."));
+  frag.appendChild(card("Snapshots", data.count ? (() => {
+    const grid = el("div", "engine-grid");
+    for (const s of data.snapshots.slice(0, 30)) {
+      const a = el("a", null, "");
+      a.href = s.url; a.target = "_blank"; a.rel = "noopener noreferrer";
+      a.appendChild(el("span", null, s.timestamp.slice(0, 10) + " " + s.timestamp.slice(11, 15) + "Z"));
+      a.appendChild(el("span", "ext", s.original));
+      const arrow = el("span", "ext-arrow");
+      arrow.innerHTML = svg("arrow");
+      a.appendChild(arrow);
+      grid.appendChild(a);
+    }
+    return grid;
+  })() : el("div", "state", "No snapshots found.")));
+  return frag;
+}
+
+function renderWallet(data) {
+  const frag = document.createDocumentFragment();
+  const isBtc = data.coin === "BTC";
+  frag.appendChild(card(data.coin + " — " + data.address, kv([
+    ["Balance", isBtc ? data.balanceBtc + " BTC" : data.balanceEth + " ETH"],
+    ["Transactions", data.txCount],
+    ["Received", isBtc ? (data.receivedSat / 1e8).toFixed(8) + " BTC" : data.receivedEth + " ETH"],
+    ["Sent", isBtc ? (data.sentSat / 1e8).toFixed(8) + " BTC" : data.sentEth + " ETH"],
+  ])));
+  return frag;
+}
+
+/* ================================================================
+   Custom tool UIs
+   ================================================================ */
+
+function customForm(section) {
+  const res = section.querySelector(".results");
+  res.innerHTML = "";
+  const form = el("div", "b-form");
+  const out = el("div", "b-out");
+  res.appendChild(form);
+  res.appendChild(out);
+  return { form, out };
+}
+
+function buildWallet(section) {
+  const { form, out } = customForm(section);
+  const row = el("div", "b-row");
+  const sel = document.createElement("select");
+  sel.className = "b-sel";
+  const b = el("option", null, "BTC"); b.value = "btc"; sel.appendChild(b);
+  const e = el("option", null, "ETH"); e.value = "eth"; sel.appendChild(e);
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "b-input";
+  input.placeholder = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa";
+  const btn = el("button", "btn-primary", "Lookup");
+  row.appendChild(sel);
+  row.appendChild(input);
+  row.appendChild(btn);
+  form.appendChild(row);
+
+  const run = async () => {
+    const addr = input.value.trim();
+    if (!addr) return;
+    btn.disabled = true;
+    setStatus("running");
+    out.innerHTML = "";
+    out.appendChild(stateEl("loading", "Querying ledger…"));
+    try {
+      const data = await apiGet("/api/wallet?coin=" + sel.value + "&addr=" + encodeURIComponent(addr));
+      setStatus("ok");
+      out.innerHTML = "";
+      const frag = document.createDocumentFragment();
+      frag.appendChild(resultBar({ id: "wallet", title: "Crypto wallet" }, sel.value + ":" + addr, data));
+      frag.appendChild(renderWallet(data));
+      out.appendChild(frag);
+    } catch (err) {
+      setStatus("error");
+      out.innerHTML = "";
+      out.appendChild(stateEl("error", err.message));
+    } finally {
+      btn.disabled = false;
+    }
+  };
+  btn.addEventListener("click", run);
+  input.addEventListener("keydown", (ev) => { if (ev.key === "Enter") run(); });
+}
+
+function buildBatch(section) {
+  const { form, out } = customForm(section);
+  const toolSel = document.createElement("select");
+  toolSel.className = "b-sel";
+  const batchTools = [
+    ["email", "Email breach check"], ["ip", "IP geolocation"], ["dns", "DNS records"],
+    ["whois", "WHOIS / RDAP"], ["username", "Username search"], ["cert", "SSL cert"],
+    ["port", "Port scan"], ["wallet", "Crypto wallet (coin:address)"],
+  ];
+  for (const [v, l] of batchTools) {
+    const o = el("option", null, l);
+    o.value = v;
+    toolSel.appendChild(o);
+  }
+  const area = document.createElement("textarea");
+  area.className = "b-area";
+  area.placeholder = "One value per line:\nuser@example.com\nanother@example.com\n0x...";
+  const btn = el("button", "btn-primary", "Run batch");
+  form.appendChild(toolSel);
+  form.appendChild(area);
+  form.appendChild(btn);
+
+  const run = async () => {
+    const items = area.value.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+    if (!items.length) return;
+    btn.disabled = true;
+    setStatus("running");
+    out.innerHTML = "";
+    out.appendChild(stateEl("loading", "Running " + items.length + " lookups…"));
+    try {
+      const data = await apiPost("/api/batch", { tool: toolSel.value, items });
+      setStatus("ok");
+      out.innerHTML = "";
+      out.appendChild(renderBatch(data));
+    } catch (err) {
+      setStatus("error");
+      out.innerHTML = "";
+      out.appendChild(stateEl("error", err.message));
+    } finally {
+      btn.disabled = false;
+    }
+  };
+  btn.addEventListener("click", run);
+}
+
+function renderBatch(data) {
+  const frag = document.createDocumentFragment();
+  const okCount = data.results.filter((r) => r.ok).length;
+  frag.appendChild(stateEl("note", data.count + " result(s) — " + okCount + " ok, " + (data.count - okCount) + " failed."));
+  const rows = [];
+  for (const r of data.results) {
+    if (!r.ok) { rows.push([r.query, "ERROR", r.error]); continue; }
+    const d = r.data;
+    let summary = "";
+    if (d.email) {
+      summary = d.breachedCount === 0 ? "no breaches" : d.breaches && d.breaches.length ? d.breaches.length + " breach(es)" : String(d.breachedCount);
+      if (d.note) summary += " · no key";
+    } else if (d.ip) {
+      const g = d.geo || {};
+      summary = g.city ? g.city + ", " + (g.country || "") : g.error || "?";
+    } else if (d.records) {
+      const rec = d.records;
+      const a = rec.A && !rec.A.error ? rec.A.map((x) => x.address).join(", ") : "none";
+      summary = "A: " + a;
+    } else if (d.ldapName) {
+      summary = "created " + (d.created ? String(d.created).slice(0, 10) : "?") + (d.expires ? " · expires " + String(d.expires).slice(0, 10) : "");
+    } else if (d.username) {
+      summary = d.found.length + " found across " + d.checked + " platforms";
+    } else if (d.subject) {
+      summary = "CN " + (d.subject.CN || "?") + " · " + (d.daysRemaining === null ? "?" : d.daysRemaining + "d left");
+    } else if (d.host && d.open) {
+      summary = d.open.length + " open / " + d.total + " scanned";
+    } else if (d.coin) {
+      summary = d.coin + " " + (d.coin === "BTC" ? d.balanceBtc + " BTC" : d.balanceEth + " ETH") + " · " + d.txCount + " tx";
+    } else {
+      summary = JSON.stringify(d).slice(0, 120);
+    }
+    rows.push([r.query, r.ok ? "OK" : "ERROR", summary]);
+  }
+  const t = table(["Query", "Status", "Summary"], rows);
+  t.className = "batch-table";
+  frag.appendChild(card("Results", t));
+
+  const bar = el("div", "rbar");
+  const g = el("div", "rbar-group");
+  const jsonB = el("button", "btn-ghost small", "JSON");
+  jsonB.addEventListener("click", () => downloadJSON(data, "batch.json"));
+  const csvB = el("button", "btn-ghost small", "CSV");
+  csvB.addEventListener("click", () => downloadCSV(data, "batch.csv"));
+  g.appendChild(jsonB);
+  g.appendChild(csvB);
+  bar.appendChild(g);
+  frag.appendChild(bar);
+  return frag;
+}
+
+function readImageMetadata(buf, file) {
+  const info = {
+    "File name": file.name,
+    "File size": file.size + " bytes",
+    "File type": file.type || "unknown",
+    "Modified": file.lastModified ? new Date(file.lastModified).toISOString().replace("T", " ").slice(0, 19) + "Z" : null,
+  };
+  if (typeof parseEXIF === "function") {
+    const ex = parseEXIF(buf);
+    if (ex && Object.keys(ex).length) {
+      if (ex.Make || ex.Model) info["Camera"] = [ex.Make, ex.Model].filter(Boolean).join(" ");
+      if (ex.DateTimeOriginal) info["Taken"] = ex.DateTimeOriginal;
+      else if (ex.DateTime) info["Taken"] = ex.DateTime;
+      if (ex.Software) info["Software"] = ex.Software;
+      if (ex.Artist) info["Artist"] = ex.Artist;
+      if (ex.Orientation) info["Orientation"] = ex.Orientation;
+      if (ex.ExposureTime) info["Exposure"] = ex.ExposureTime + "s";
+      if (ex.FNumber) info["Aperture"] = "f/" + ex.FNumber;
+      if (ex.ISO) info["ISO"] = ex.ISO;
+      if (ex.FocalLength) info["Focal length"] = ex.FocalLength + "mm";
+      if (ex.PixelDimensions) info["Pixel dimensions"] = ex.PixelDimensions;
+      if (ex.LensModel) info["Lens"] = ex.LensModel;
+      if (ex.gps) info.gps = ex.gps;
+    }
+  }
+  return info;
+}
+
+function renderMetadata(info) {
+  const frag = document.createDocumentFragment();
+  const pairs = [];
+  for (const [k, v] of Object.entries(info)) {
+    if (v === null || v === undefined || v === "" || k === "gps") continue;
+    pairs.push([k, typeof v === "object" ? JSON.stringify(v) : String(v)]);
+  }
+  if (!pairs.length) frag.appendChild(stateEl("note", "No EXIF metadata found in this image."));
+  else frag.appendChild(card("File & EXIF", kv(pairs)));
+  if (info.gps) {
+    frag.appendChild(card("GPS location", kv([
+      ["Latitude", info.gps.lat], ["Longitude", info.gps.lon], ["Altitude", info.gps.alt],
+    ])));
+  }
+  return frag;
+}
+
+function buildMetadata(section) {
+  const { form, out } = customForm(section);
+  const fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.accept = "image/*";
+  fileInput.className = "b-file";
+  form.appendChild(fileInput);
+  form.appendChild(el("div", "b-hint", "Processed entirely in your browser — the file never leaves your machine."));
+  fileInput.addEventListener("change", async () => {
+    const f = fileInput.files && fileInput.files[0];
+    if (!f) return;
+    out.innerHTML = "";
+    out.appendChild(stateEl("loading", "Reading metadata…"));
+    try {
+      const buf = await f.arrayBuffer();
+      setStatus("ok");
+      out.innerHTML = "";
+      const info = readImageMetadata(buf, f);
+      const frag = document.createDocumentFragment();
+      frag.appendChild(resultBar({ id: "metadata", title: "Metadata / EXIF" }, f.name, info));
+      frag.appendChild(renderMetadata(info));
+      out.appendChild(frag);
+    } catch (err) {
+      setStatus("error");
+      out.innerHTML = "";
+      out.appendChild(stateEl("error", err.message));
+    }
+  });
+}
+
+async function hashFile(buf) {
+  const hex = (ab) => Array.from(new Uint8Array(ab)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  const bytes = new Uint8Array(buf);
+  const [sha256, sha384, sha512, md5, sha1] = await Promise.all([
+    crypto.subtle.digest("SHA-256", buf).then(hex),
+    crypto.subtle.digest("SHA-384", buf).then(hex),
+    crypto.subtle.digest("SHA-512", buf).then(hex),
+    Promise.resolve(md5Hex(bytes)),
+    Promise.resolve(sha1Hex(bytes)),
+  ]);
+  return { MD5: md5, "SHA-1": sha1, "SHA-256": sha256, "SHA-384": sha384, "SHA-512": sha512 };
+}
+
+function renderFileHash(f, h) {
+  const frag = document.createDocumentFragment();
+  frag.appendChild(card(f.name + " — " + f.size + " bytes", table(["Algorithm", "Hash"], Object.entries(h))));
+  return frag;
+}
+
+function buildFileHash(section) {
+  const { form, out } = customForm(section);
+  const fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.className = "b-file";
+  form.appendChild(fileInput);
+  form.appendChild(el("div", "b-hint", "Hashes are computed locally in your browser."));
+  fileInput.addEventListener("change", async () => {
+    const f = fileInput.files && fileInput.files[0];
+    if (!f) return;
+    out.innerHTML = "";
+    out.appendChild(stateEl("loading", "Hashing…"));
+    try {
+      const buf = await f.arrayBuffer();
+      const h = await hashFile(buf);
+      setStatus("ok");
+      out.innerHTML = "";
+      const frag = document.createDocumentFragment();
+      frag.appendChild(resultBar({ id: "hashfile", title: "File hasher" }, f.name, h));
+      frag.appendChild(renderFileHash(f, h));
+      out.appendChild(frag);
+    } catch (err) {
+      setStatus("error");
+      out.innerHTML = "";
+      out.appendChild(stateEl("error", err.message));
+    }
+  });
+}
+
+function buildDorks(section) {
+  const { form, out } = customForm(section);
+  const fields = [
+    ["Site", "site:", "limit to a domain", "example.com"],
+    ["In title", "intitle:", "word that must appear in the title", "username"],
+    ["In URL", "inurl:", "word that must appear in the URL", "admin"],
+    ["File type", "filetype:", "file extension", "pdf"],
+    ["In text", "intext:", "word in page body", "password"],
+    ["Exact phrase", "phrase", "a quoted phrase", "\"someone@example.com\""],
+    ["Raw terms", "raw", "free-form terms", "name city"],
+  ];
+  const cells = [];
+  for (const [label, op, hint, ph] of fields) {
+    const w = el("div", "dork-field");
+    w.appendChild(el("label", null, label));
+    const input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = ph;
+    input.className = "b-input";
+    input.dataset.op = op;
+    w.appendChild(input);
+    w.appendChild(el("div", "b-hint", hint));
+    form.appendChild(w);
+    cells.push(input);
+  }
+  const row = el("div", "b-row");
+  const engineSel = document.createElement("select");
+  engineSel.className = "b-sel";
+  for (const [v, l] of [["google", "Google"], ["bing", "Bing"], ["ddg", "DuckDuckGo"], ["yandex", "Yandex"], ["startpage", "Startpage"]]) {
+    const o = el("option", null, l);
+    o.value = v;
+    engineSel.appendChild(o);
+  }
+  const btn = el("button", "btn-primary", "Build query");
+  row.appendChild(engineSel);
+  row.appendChild(btn);
+  form.appendChild(row);
+
+  const build = () => {
+    const parts = [];
+    for (const input of cells) {
+      const v = input.value.trim();
+      if (!v) continue;
+      const op = input.dataset.op;
+      if (op === "site:") parts.push("site:" + v.replace(/[^\w.-]/g, ""));
+      else if (op === "filetype:") parts.push("filetype:" + v.replace(/[^\w.]/g, ""));
+      else if (op === "inurl:") parts.push("inurl:" + v);
+      else if (op === "intitle:") parts.push('intitle:"' + v.replace(/"/g, "") + '"');
+      else if (op === "phrase") parts.push('"' + v.replace(/"/g, "") + '"');
+      else parts.push(v);
+    }
+    const q = parts.join(" ").trim();
+    if (!q) return;
+    out.innerHTML = "";
+    const urls = {
+      google: "https://www.google.com/search?q=",
+      bing: "https://www.bing.com/search?q=",
+      ddg: "https://duckduckgo.com/?q=",
+      yandex: "https://yandex.com/search/?text=",
+      startpage: "https://www.startpage.com/sp/search?query=",
+    };
+    const enc = encodeURIComponent(q);
+    const a = el("div", "dork-query");
+    a.appendChild(el("div", "k", "Query"));
+    const qwrap = el("div", "b-row");
+    const code = el("code", "dork-code", q);
+    const copyBtn = el("button", "btn-ghost small", "Copy");
+    copyBtn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(q);
+        toast("Copied.", "ok");
+      } catch {
+        toast("Copy failed.", "error");
+      }
+    });
+    qwrap.appendChild(code);
+    qwrap.appendChild(copyBtn);
+    a.appendChild(qwrap);
+    out.appendChild(a);
+
+    const grid = el("div", "engine-grid");
+    for (const [name, base] of Object.entries(urls)) {
+      const link = el("a", null, name);
+      link.href = base + enc;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      const arrow = el("span", "ext-arrow");
+      arrow.innerHTML = svg("arrow");
+      link.appendChild(arrow);
+      grid.appendChild(link);
+    }
+    out.appendChild(card("Open in", grid));
+  };
+  btn.addEventListener("click", build);
+  cells.forEach((c) => c.addEventListener("keydown", (ev) => { if (ev.key === "Enter") build(); }));
+}
+
+function buildReverseImage(section) {
+  const { form, out } = customForm(section);
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "b-input";
+  input.placeholder = "https://example.com/image.jpg";
+  const btn = el("button", "btn-primary", "Search");
+  form.appendChild(input);
+  form.appendChild(btn);
+  form.appendChild(el("div", "b-hint", "The image must be reachable at a public URL. Engines open in a new tab."));
+
+  const run = () => {
+    const url = input.value.trim();
+    if (!/^https?:\/\//i.test(url)) return;
+    out.innerHTML = "";
+    const enc = encodeURIComponent(url);
+    const engines = [
+      ["Yandex", "https://yandex.com/images/search?rpt=imageview&url=" + enc],
+      ["Google Lens", "https://lens.google.com/uploadbyurl?url=" + enc],
+      ["Bing", "https://www.bing.com/images/searchbyimage?cbir=sbi&imgurl=" + enc],
+      ["Tineye", "https://tineye.com/search?url=" + enc],
+      ["Saucenao", "https://saucenao.com/search.php?url=" + enc],
+      ["KarmaDecay (Reddit)", "https://karmadecay.com/search?url=" + enc],
+    ];
+    const grid = el("div", "engine-grid");
+    for (const [name, u] of engines) {
+      const a = el("a", null, name);
+      a.href = u;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      const arrow = el("span", "ext-arrow");
+      arrow.innerHTML = svg("arrow");
+      a.appendChild(arrow);
+      grid.appendChild(a);
+    }
+    out.appendChild(card("Reverse image sources", grid));
+  };
+  btn.addEventListener("click", run);
+  input.addEventListener("keydown", (ev) => { if (ev.key === "Enter") run(); });
+}
+
+/* ---- report generator ---- */
+
+function renderHeadersShort(data) {
+  const frag = document.createDocumentFragment();
+  const sec = data.security || [];
+  if (!sec.length) {
+    frag.appendChild(el("div", "state", "No headers returned."));
+    return frag;
+  }
+  frag.appendChild(card("Security headers", table(["Header", "Present", "Value"], sec.map((h) => [h.header, h.present ? "yes" : "no", h.value ? String(h.value).slice(0, 90) : "—"]))));
+  const final = data.chain && data.chain[data.chain.length - 1];
+  if (final && !final.error) frag.appendChild(stateEl("note", "Final status: HTTP " + final.status));
+  return frag;
+}
+
+async function generateReport(target) {
+  const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(target);
+  const host = isEmail ? target.split("@")[1] : cleanDomainLocal(target);
+  const sections = [];
+  const add = (title, node, raw) => sections.push({ title, node, raw });
+
+  if (isEmail) {
+    try {
+      const d = await apiGet("/api/breach?email=" + encodeURIComponent(target));
+      add("Email breach exposure", renderBreach(d), d);
+    } catch (e) { add("Email breach exposure", stateEl("error", e.message), { error: e.message }); }
+    try {
+      const d = await apiGet("/api/dns/" + encodeURIComponent(host));
+      const mx = d.records.MX;
+      add("Mail server (MX)", mx && !mx.error
+        ? table(["Priority", "Server"], mx.map((m) => [String(m.priority), m.exchange]))
+        : el("div", "state", "No MX records found."), d);
+    } catch (e) { add("Mail server (MX)", stateEl("error", e.message), { error: e.message }); }
+  } else {
+    const jobs = [
+      ["WHOIS / RDAP", "/api/whois/" + encodeURIComponent(host), renderWhois],
+      ["DNS records", "/api/dns/" + encodeURIComponent(host), renderDns],
+      ["Subdomains", "/api/subdomains/" + encodeURIComponent(host), renderSubdomains],
+      ["HTTP headers", "/api/headers?u=" + encodeURIComponent("https://" + host), renderHeadersShort],
+      ["TLS certificate", "/api/cert?host=" + encodeURIComponent(host), renderCert],
+      ["Open ports", "/api/port?host=" + encodeURIComponent(host), renderPort],
+      ["Wayback snapshots", "/api/wayback?url=" + encodeURIComponent("https://" + host), renderWayback],
+    ];
+    await Promise.all(jobs.map(async ([title, url, render]) => {
+      try {
+        const d = await apiGet(url);
+        add(title, render(d), d);
+      } catch (e) {
+        add(title, stateEl("error", e.message), { error: e.message });
+      }
+    }));
+  }
+  return { target, isEmail, host, generatedAt: new Date().toISOString(), sections };
+}
+
+function renderReport(target, data) {
+  const wrap = el("div");
+  const bar = el("div", "rbar");
+  const g1 = el("div", "rbar-group");
+  const jsonB = el("button", "btn-ghost small", "JSON");
+  jsonB.addEventListener("click", () => downloadJSON({ target, generatedAt: data.generatedAt, sections: data.sections.map((s) => ({ title: s.title, data: s.raw || { error: true } })) }, "report-" + slug(target) + ".json"));
+  const printB = el("button", "btn-primary small", "Print / PDF");
+  printB.addEventListener("click", () => {
+    document.body.classList.add("printing");
+    window.print();
+    setTimeout(() => document.body.classList.remove("printing"), 500);
+  });
+  g1.appendChild(jsonB);
+  g1.appendChild(printB);
+  bar.appendChild(g1);
+  wrap.appendChild(bar);
+
+  const report = el("div", "report");
+  const head = el("div", "report-head");
+  head.appendChild(el("h2", null, "OSINT report — " + target));
+  head.appendChild(el("div", "muted", "Generated " + new Date(data.generatedAt).toLocaleString() + " · L toolkit"));
+  report.appendChild(head);
+  for (const sec of data.sections) {
+    const cardWrap = el("section", "report-section");
+    cardWrap.appendChild(el("h3", null, sec.title));
+    cardWrap.appendChild(sec.node);
+    report.appendChild(cardWrap);
+  }
+  wrap.appendChild(report);
+  return wrap;
+}
+
+function buildReport(section) {
+  const { form, out } = customForm(section);
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "b-input";
+  input.placeholder = "example.com or someone@example.com";
+  const btn = el("button", "btn-primary", "Generate report");
+  form.appendChild(input);
+  form.appendChild(btn);
+
+  const run = async () => {
+    const target = input.value.trim();
+    if (!target) return;
+    btn.disabled = true;
+    setStatus("running");
+    out.innerHTML = "";
+    out.appendChild(stateEl("loading", "Running all relevant lookups…"));
+    try {
+      const data = await generateReport(target);
+      setStatus("ok");
+      out.innerHTML = "";
+      out.appendChild(renderReport(target, data));
+    } catch (err) {
+      setStatus("error");
+      out.innerHTML = "";
+      out.appendChild(stateEl("error", err.message));
+    } finally {
+      btn.disabled = false;
+    }
+  };
+  btn.addEventListener("click", run);
+  input.addEventListener("keydown", (ev) => { if (ev.key === "Enter") run(); });
+}
+
+/* ================================================================
+   Investigations (page 6)
+   ================================================================ */
+
+function invCard(inv, refresh) {
+  const c = el("div", "inv-card");
+  const head = el("div", "inv-head");
+  head.appendChild(el("strong", null, inv.title));
+  const statusBtn = el("button", "inv-status " + inv.status, inv.status);
+  statusBtn.addEventListener("click", async () => {
+    const next = inv.status === "open" ? "stale" : inv.status === "stale" ? "closed" : "open";
+    try {
+      await apiPatch("/api/investigations/" + inv.id, { status: next });
+      refresh();
+    } catch {}
+  });
+  head.appendChild(statusBtn);
+  c.appendChild(head);
+  c.appendChild(el("div", "inv-meta", "Target: " + (inv.target || "—") + " · " + inv.entries.length + " entries · updated " + new Date(inv.updatedAt).toLocaleDateString()));
+
+  if (inv.entries.length) {
+    const ul = el("ul", "clean inv-entries");
+    inv.entries.forEach((e, idx) => {
+      const li = el("li", null);
+      const strong = el("strong", null, e.tool + ": ");
+      li.appendChild(strong);
+      li.appendChild(el("span", null, e.query));
+      const del = el("button", "link-btn danger", "remove");
+      del.addEventListener("click", async () => {
+        try {
+          await apiDelete("/api/investigations/" + inv.id + "/entries/" + idx);
+          refresh();
+        } catch {}
+      });
+      li.appendChild(del);
+      ul.appendChild(li);
+    });
+    c.appendChild(ul);
+  }
+
+  const notes = document.createElement("textarea");
+  notes.className = "b-area inv-notes";
+  notes.placeholder = "Notes…";
+  notes.value = inv.notes || "";
+  notes.addEventListener("change", async () => {
+    try { await apiPatch("/api/investigations/" + inv.id, { notes: notes.value }); } catch {}
+  });
+  c.appendChild(notes);
+
+  const actions = el("div", "b-row");
+  const delBtn = el("button", "btn-ghost danger", "Delete case");
+  delBtn.addEventListener("click", async () => {
+    if (!confirm("Delete this case and all its entries?")) return;
+    try {
+      await apiDelete("/api/investigations/" + inv.id);
+      refresh();
+    } catch {}
+  });
+  actions.appendChild(delBtn);
+  c.appendChild(actions);
+  return c;
+}
+
+function renderInvestigations() {
+  setPageTitle("Investigations");
+  setStatus("ok");
+  const view = document.getElementById("page-view");
+  view.classList.remove("hidden");
+  view.innerHTML = "";
+  const frag = document.createDocumentFragment();
+
+  const hero = el("div", "page-hero");
+  const pageIco = el("div", "page-ico");
+  pageIco.innerHTML = svg("folder");
+  hero.appendChild(pageIco);
+  const heroText = el("div");
+  heroText.appendChild(el("h1", null, "Investigations"));
+  heroText.appendChild(el("p", null, "Save targets, notes and lookup results to build a case over time. Use “Save to case” on any tool result."));
+  hero.appendChild(heroText);
+  frag.appendChild(hero);
+
+  const newCard = el("div", "inv-new");
+  const titleInput = document.createElement("input");
+  titleInput.type = "text";
+  titleInput.className = "b-input";
+  titleInput.placeholder = "Case title…";
+  const targetInput = document.createElement("input");
+  targetInput.type = "text";
+  targetInput.className = "b-input";
+  targetInput.placeholder = "Target (optional)…";
+  const createBtn = el("button", "btn-primary", "New case");
+  newCard.appendChild(titleInput);
+  newCard.appendChild(targetInput);
+  newCard.appendChild(createBtn);
+  frag.appendChild(newCard);
+
+  const listWrap = el("div", "inv-list");
+  frag.appendChild(listWrap);
+  view.appendChild(frag);
+
+  const load = async () => {
+    try {
+      const list = await apiGet("/api/investigations");
+      listWrap.innerHTML = "";
+      if (!list.length) {
+        listWrap.appendChild(el("div", "state", "No cases yet. Save a result from any tool to start one."));
+        return;
+      }
+      for (const inv of list) listWrap.appendChild(invCard(inv, load));
+    } catch (err) {
+      listWrap.appendChild(stateEl("error", err.message));
+    }
+  };
+
+  createBtn.addEventListener("click", async () => {
+    const title = titleInput.value.trim() || "Untitled";
+    createBtn.disabled = true;
+    try {
+      await apiPost("/api/investigations", { title, target: targetInput.value.trim() });
+      toast("Case created.", "ok");
+      titleInput.value = "";
+      targetInput.value = "";
+      load();
+    } catch (err) {
+      toast(err.message, "error");
+    } finally {
+      createBtn.disabled = false;
+    }
+  });
+  load();
+}
+
+/* ================================================================
+   AI assistant (page 7)
+   ================================================================ */
+
+function renderAi() {
+  setPageTitle("AI Assistant");
+  setStatus("ok");
+  const view = document.getElementById("page-view");
+  view.classList.remove("hidden");
+  view.innerHTML = "";
+  const frag = document.createDocumentFragment();
+
+  const hero = el("div", "page-hero");
+  const pageIco = el("div", "page-ico");
+  pageIco.innerHTML = svg("sparkles");
+  hero.appendChild(pageIco);
+  const heroText = el("div");
+  heroText.appendChild(el("h1", null, "AI Assistant"));
+  heroText.appendChild(el("p", null, "An OSINT + OPSEC copilot powered by DeepSeek. It can run every lookup in this toolkit and interpret the results."));
+  hero.appendChild(heroText);
+  frag.appendChild(hero);
+
+  const chat = el("div", "chat");
+  const log = el("div", "chat-log");
+  chat.appendChild(log);
+
+  const form = el("form", "chat-form");
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "q chat-input";
+  input.placeholder = "Ask about a domain, email, or your OPSEC…";
+  input.autocomplete = "off";
+  input.spellcheck = false;
+  const sendBtn = el("button", "btn-primary", "Send");
+  form.appendChild(input);
+  form.appendChild(sendBtn);
+  chat.appendChild(form);
+  frag.appendChild(chat);
+  view.appendChild(frag);
+
+  apiGet("/api/chat/status").then((s) => {
+    if (!s.configured) {
+      log.appendChild(stateEl("note", "AI is not configured on this server. Set DEEPSEEK_API_KEY in the server environment to enable it."));
+    }
+  }).catch(() => {});
+
+  const suggestions = ["Check a domain for me", "Scan example.com", "What should I install first?", "Is this email breached?"];
+  const sugg = el("div", "chat-sugg");
+  for (const s of suggestions) {
+    const b = el("button", "chip", s);
+    b.addEventListener("click", () => { input.value = s; send(); });
+    sugg.appendChild(b);
+  }
+  log.appendChild(sugg);
+
+  const history = [];
+  let busy = false;
+
+  const addMsg = (role) => {
+    const m = el("div", "msg " + role);
+    m.appendChild(el("div", "bubble", ""));
+    log.appendChild(m);
+    log.scrollTop = log.scrollHeight;
+    return m;
+  };
+
+  const typeMsg = (m, text) => {
+    const bubble = m.querySelector(".bubble");
+    let i = 0;
+    const iv = setInterval(() => {
+      i += 1;
+      bubble.textContent = text.slice(0, i);
+      log.scrollTop = log.scrollHeight;
+      if (i >= text.length) clearInterval(iv);
+    }, 6);
+  };
+
+  const send = async () => {
+    const text = input.value.trim();
+    if (!text || busy) return;
+    busy = true;
+    history.push({ role: "user", content: text });
+    const userMsg = addMsg("user");
+    userMsg.querySelector(".bubble").textContent = text;
+    input.value = "";
+    const aiMsg = addMsg("ai");
+    aiMsg.querySelector(".bubble").textContent = "…";
+    setStatus("running");
+    try {
+      const r = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: history }),
+      });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error + (j.detail ? " — " + j.detail : ""));
+      history.push({ role: "assistant", content: j.content });
+      setStatus("ok");
+      typeMsg(aiMsg, j.content || "No response.");
+    } catch (err) {
+      setStatus("error");
+      aiMsg.querySelector(".bubble").textContent = err.message;
+    } finally {
+      busy = false;
+    }
+  };
+
+  form.addEventListener("submit", (ev) => { ev.preventDefault(); send(); });
+}
+
+/* ================================================================
+   Command palette (Ctrl+K)
+   ================================================================ */
+
+function paletteItems() {
+  const items = [];
+  TOOLS.forEach((t) => items.push({ label: t.title, sub: t.desc, icon: t.icon, run: () => switchTool(t.id) }));
+  items.push({ label: "Home", sub: "Tool grid", icon: "globe", run: () => renderHome() });
+  items.push({ label: "Field Manual", sub: "OPSEC · OSINT · CSINT · EDR · doxing", icon: "book", run: () => switchPage(2) });
+  items.push({ label: "Hardening Guide", sub: "Protect yourself, clear your name", icon: "shield", run: () => switchPage(3) });
+  items.push({ label: "Settings", sub: "Themes, smoothness, profile", icon: "gear", run: () => switchPage(4) });
+  items.push({ label: "Downloads & Tools", sub: "Everything to install to stay untrackable", icon: "download", run: () => switchPage(5) });
+  items.push({ label: "Investigations", sub: "Saved cases and notes", icon: "folder", run: () => switchPage(6) });
+  items.push({ label: "AI Assistant", sub: "DeepSeek OSINT copilot", icon: "sparkles", run: () => switchPage(7) });
+  items.push({ label: "Export last result", sub: lastResult ? lastResult.tool + " — " + lastResult.query : "Run a lookup first", icon: "download", run: () => lastResult && downloadJSON(lastResult.data, slug(lastResult.tool) + ".json") });
+  return items;
+}
+
+function openPalette() {
+  let overlay = document.getElementById("palette");
+  if (!overlay) {
+    overlay = el("div", "palette");
+    overlay.id = "palette";
+    overlay.innerHTML =
+      `<div class="pal-box">` +
+        `<div class="pal-search-row">` +
+          `<span class="pal-ico">${svg("search")}</span>` +
+          `<input class="pal-input" type="text" placeholder="Type a tool, page or command…" autocomplete="off" spellcheck="false" />` +
+          `<span class="pal-k">esc</span>` +
+        `</div>` +
+        `<div class="pal-list"></div>` +
+      `</div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener("mousedown", (ev) => {
+      if (ev.target === overlay) closePalette();
+    });
+  }
+  overlay.classList.add("open");
+  const input = overlay.querySelector(".pal-input");
+  input.value = "";
+  renderPalette("");
+  input.focus();
+}
+
+function closePalette() {
+  const overlay = document.getElementById("palette");
+  if (overlay) overlay.classList.remove("open");
+}
+
+function renderPalette(term) {
+  const overlay = document.getElementById("palette");
+  if (!overlay) return;
+  const list = overlay.querySelector(".pal-list");
+  const t = term.toLowerCase();
+  const items = paletteItems().filter((i) => !t || (i.label + " " + i.sub).toLowerCase().includes(t));
+  list.innerHTML = "";
+  let idx = -1;
+  for (const item of items) {
+    const b = el("button", "pal-item");
+    b.innerHTML = `<span class="hc-ico">${svg(item.icon)}</span><span class="pal-label">${esc(item.label)}</span><span class="pal-sub">${esc(item.sub)}</span>`;
+    b.addEventListener("click", () => { closePalette(); item.run(); });
+    list.appendChild(b);
+  }
+  if (!items.length) list.appendChild(el("div", "state", "No matches."));
+  return items;
+}
+
+/* ================================================================
+   Deep links (#t/<tool>?q=… , #p<N>)
+   ================================================================ */
+
+function processDeepLink() {
+  const h = location.hash.slice(1);
+  const m = h.match(/^t\/([a-z0-9]+)\?q=(.*)$/i);
+  if (m) {
+    const id = m[1].toLowerCase();
+    const q = decodeURIComponent(m[2]);
+    const tool = TOOLS.find((t) => t.id === id);
+    if (tool && !tool.custom) {
+      switchTool(id);
+      const input = document.querySelector("#tool-" + id + " .q");
+      if (input) {
+        input.value = q;
+        input.dispatchEvent(new Event("input"));
+      }
+      const form = document.querySelector("#tool-" + id + " .qform");
+      if (form) form.requestSubmit();
+    }
+  } else if (/^p[0-9]$/.test(h)) {
+    switchPage(Number(h.slice(1)));
+  }
+  if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+}
+
+/* ================================================================
    Boot
    ================================================================ */
 
 buildShell();
 initTypedInputs();
+window.addEventListener("hashchange", processDeepLink);
 
 (async function boot() {
   try {
