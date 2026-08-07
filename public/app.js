@@ -241,19 +241,84 @@ const DEFAULT_SETTINGS = {
   theme: "default",
   smooth: 50,
   type: 60,
-  cursor: true,
+  cursorStyle: "dot",
+  cursorColor: "",
+  cursorSize: 60,
   cursorSmooth: 50,
   boot: true,
   grid: true,
+  wallpaper: "none",
+  wallpaperDim: 45,
+  sidebarSide: "left",
+  sidebarWidth: "normal",
+  sidebarCompact: false,
+  navPages: true,
+  showPager: true,
   name: "",
+  tagline: "",
+  nameFont: "Inter",
+  nameColor: "",
+  avatar: "letter",
+  avatarGrad: "default",
+  profileBg: "default",
 };
 
+const CURSOR_STYLES = [
+  { id: "dot", name: "Dot + ring", icon: "languages" },
+  { id: "ring", name: "Ring", icon: "globe" },
+  { id: "cross", name: "Crosshair", icon: "search" },
+  { id: "off", name: "OS cursor", icon: "box" },
+];
+
+const NAME_FONTS = [
+  { id: "Inter", css: "'Inter', sans-serif" },
+  { id: "JetBrains Mono", css: "'JetBrains Mono', monospace" },
+  { id: "Space Grotesk", css: "'Space Grotesk', sans-serif" },
+  { id: "Orbitron", css: "'Orbitron', sans-serif" },
+  { id: "Playfair Display", css: "'Playfair Display', serif" },
+  { id: "Pacifico", css: "'Pacifico', cursive" },
+  { id: "Caveat", css: "'Caveat', cursive" },
+  { id: "Righteous", css: "'Righteous', cursive" },
+  { id: "Fredoka", css: "'Fredoka', sans-serif" },
+  { id: "Ubuntu Mono", css: "'Ubuntu Mono', monospace" },
+  { id: "Archivo", css: "'Archivo', sans-serif" },
+];
+
+const COLOR_SWATCHES = [
+  "", "#ffffff", "#6c8bff", "#8aa2ff", "#22c55e", "#22d3ee", "#a78bfa",
+  "#fb923c", "#f43f5e", "#ec4899", "#d946ef", "#f59e0b", "#84cc16",
+  "#e2e8f0", "#f5b24d",
+];
+
+const PROFILE_BGS = {
+  default: "radial-gradient(120% 140% at 15% -10%, rgba(108,139,255,0.32), transparent 55%), linear-gradient(160deg, #10101a, #0b0b11)",
+  midnight: "linear-gradient(135deg, #0f0c29, #302b63, #24243e)",
+  synthwave: "linear-gradient(135deg, #ff0844, #ffb199)",
+  matrix: "linear-gradient(135deg, #041f0a, #14532d)",
+  cyber: "linear-gradient(135deg, #082f49, #22d3ee)",
+  ember: "linear-gradient(135deg, #7c2d12, #f97316)",
+  ocean: "linear-gradient(135deg, #0e7490, #67e8f9)",
+  violet: "linear-gradient(135deg, #4c1d95, #a78bfa)",
+  crimson: "linear-gradient(135deg, #7f1d1d, #f43f5e)",
+  forest: "linear-gradient(135deg, #14532d, #4ade80)",
+  gold: "linear-gradient(135deg, #713f12, #fbbf24)",
+  steel: "linear-gradient(135deg, #111827, #64748b)",
+  cherry: "linear-gradient(135deg, #831843, #ec4899)",
+  blood: "linear-gradient(135deg, #450a0a, #dc2626)",
+  dawn: "linear-gradient(135deg, #1e3a8a, #f0abfc)",
+  smoke: "linear-gradient(135deg, #1f2937, #9ca3af)",
+};
+
+const AVATAR_EMOJIS = ["🦉", "🕶️", "🔥", "⚡", "🛡️", "🗡️", "🎯", "🧠", "👁️", "🌙", "⭐", "🔮", "🥷", "💀", "🌊", "🦊", "🐺", "🚀", "🎮", "🎧", "📡", "🗺️", "⚔️", "☠️"];
+
 let settings = { ...DEFAULT_SETTINGS };
+let cachedAccent = "#6c8bff";
 
 function loadSettings() {
   try {
     const raw = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
     settings = { ...DEFAULT_SETTINGS, ...raw };
+    if (raw.cursor === false && !raw.cursorStyle) settings.cursorStyle = "off";
   } catch {
     settings = { ...DEFAULT_SETTINGS };
   }
@@ -265,6 +330,27 @@ function saveSettings() {
   } catch {}
 }
 
+function fontCss(id) {
+  const f = NAME_FONTS.find((x) => x.id === id);
+  return f ? f.css : "var(--sans)";
+}
+
+function gradCss(id) {
+  return PROFILE_BGS[id] || PROFILE_BGS.default;
+}
+
+function refreshAccent() {
+  const v = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
+  cachedAccent = v || "#6c8bff";
+}
+
+function hexToRgba(hex, a) {
+  const m = /^#?([0-9a-f]{6})$/i.exec((hex || "").trim());
+  if (!m) return "rgba(108,139,255," + a + ")";
+  const n = parseInt(m[1], 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+
 function applySettings() {
   document.documentElement.dataset.theme = settings.theme in THEMES ? settings.theme : "default";
   const ui = 0.04 + (settings.smooth / 100) * 0.42;
@@ -273,20 +359,50 @@ function applySettings() {
   document.documentElement.style.setProperty("--load-time", load.toFixed(3) + "s");
   const grid = document.querySelector(".bg-grid");
   if (grid) grid.classList.toggle("hidden", !settings.grid);
-  document.querySelectorAll(".cursor").forEach((c) => c.classList.toggle("hidden", !settings.cursor));
+  applyWallpaper();
+  applyCursor();
+  applyChrome();
   applyProfile();
+  refreshAccent();
+}
+
+function applyCursor() {
+  document.body.dataset.cursor = CURSOR_STYLES.some((c) => c.id === settings.cursorStyle) ? settings.cursorStyle : "dot";
+  document.documentElement.style.setProperty("--cur-color", settings.cursorColor || "var(--accent)");
+  const on = settings.cursorStyle !== "off";
+  document.querySelectorAll(".cursor").forEach((c) => c.classList.toggle("hidden", !on));
+}
+
+function applyChrome() {
+  document.body.dataset.side = settings.sidebarSide === "right" ? "right" : "left";
+  document.body.dataset.navpages = settings.navPages ? "1" : "0";
+  const sb = document.getElementById("sidebar");
+  if (sb) {
+    const w = settings.sidebarWidth === "compact" ? 206 : settings.sidebarWidth === "wide" ? 300 : 252;
+    sb.style.setProperty("--sidebar-w", w + "px");
+    sb.classList.toggle("compact", settings.sidebarCompact);
+  }
+  const pager = document.querySelector(".page-head .pager");
+  if (pager) pager.classList.toggle("hidden", !settings.showPager);
 }
 
 function applyProfile() {
   const ue = document.getElementById("user-email");
   if (!ue) return;
   const name = (settings.name || "").trim();
-  ue.textContent = name || ue.dataset.email || "";
+  const email = ue.dataset.email || "";
+  ue.textContent = name || email;
+  const us = document.getElementById("user-sub");
+  if (us) us.textContent = (settings.tagline || "").trim() || (name ? "View profile" : email || "Signed in");
   const av = document.getElementById("user-avatar");
   if (av) {
-    const first = (name || ue.dataset.email || "?").trim()[0] || "?";
-    av.textContent = first.toUpperCase();
+    av.style.background = gradCss(settings.avatarGrad);
+    const first = (name || email || "?").trim()[0] || "?";
+    av.textContent = settings.avatar && settings.avatar !== "letter" ? settings.avatar : first.toUpperCase();
   }
+  const d = document.documentElement;
+  d.style.setProperty("--pf-font", fontCss(settings.nameFont));
+  d.style.setProperty("--pf-color", settings.nameColor || "var(--text)");
 }
 
 function sSlider(key, min, max) {
@@ -358,7 +474,7 @@ function smoothCard() {
   head.appendChild(ico);
   head.appendChild(el("span", null, "Feel"));
   card.appendChild(head);
-  card.appendChild(el("p", "s-sub", "Animation speed, typing speed, and the cursor."));
+  card.appendChild(el("p", "s-sub", "Animation and typing speed, boot and backdrop."));
 
   const ui = sSlider("smooth", 0, 100);
   ui.addEventListener("input", () => {
@@ -373,18 +489,10 @@ function smoothCard() {
     settings.type = Number(tp.value);
     saveSettings();
   });
-  card.appendChild(sRow("Typing speed", "Home screen typewriter speed", tp));
+  card.appendChild(sRow("Typing speed", "Typewriter speed (home, profile)", tp));
 
-  const cs = sSlider("cursorSmooth", 0, 100);
-  cs.addEventListener("input", () => {
-    settings.cursorSmooth = Number(cs.value);
-    saveSettings();
-  });
-  card.appendChild(sRow("Cursor lag", "How much the ring trails the dot", cs));
-
-  card.appendChild(sRow("Custom cursor", "Smooth dot + ring instead of the OS cursor", sToggle("cursor")));
   card.appendChild(sRow("Boot screen", "Loading overlay after sign-in", sToggle("boot")));
-  card.appendChild(sRow("Grid backdrop", "Background grid pattern", sToggle("grid")));
+  card.appendChild(sRow("Grid backdrop", "Subtle background grid pattern", sToggle("grid")));
 
   const reset = el("button", "btn-ghost", "Reset to defaults");
   reset.type = "button";
@@ -399,6 +507,179 @@ function smoothCard() {
   return card;
 }
 
+function chipPreview() {
+  const name = (settings.name || "").trim();
+  const email = document.getElementById("user-email") ? document.getElementById("user-email").dataset.email : "";
+  const wrap = el("div", "chip-prev");
+  wrap.innerHTML =
+    `<div class="chip-prev-card">` +
+      `<span class="chip-prev-av" style="background:${gradCss(settings.avatarGrad)}">${settings.avatar && settings.avatar !== "letter" ? settings.avatar : ((name || email || "?").trim()[0] || "?").toUpperCase()}</span>` +
+      `<div class="chip-prev-meta"><span class="chip-prev-name">${esc(name || email || "—")}</span><span class="chip-prev-sub">${esc((settings.tagline || "").trim() || "View profile")}</span></div>` +
+      `<span class="chip-prev-chev">»</span>` +
+    `</div>`;
+  const el0 = wrap.querySelector(".chip-prev-name");
+  el0.style.fontFamily = fontCss(settings.nameFont);
+  el0.style.color = settings.nameColor || "var(--text)";
+  return wrap;
+}
+
+function colorSwatchRow(current, onPick) {
+  const row = el("div", "swatches cswatches");
+  for (const c of COLOR_SWATCHES) {
+    const b = el("button", "swatch cswatch" + (current === c ? " active" : ""));
+    b.dataset.color = c;
+    b.style.setProperty("--sw", c || "transparent");
+    b.title = c || "Auto (theme accent)";
+    if (!c) b.innerHTML = `<span class="sw-dot auto"></span><span>auto</span>`;
+    else b.innerHTML = `<span class="sw-dot"></span><span>${c}</span>`;
+    b.addEventListener("click", () => {
+      onPick(c);
+      row.querySelectorAll(".cswatch").forEach((x) => x.classList.toggle("active", x.dataset.color === c));
+    });
+    row.appendChild(b);
+  }
+  return row;
+}
+
+function cursorCard() {
+  const card = el("div", "s-card");
+  const head = el("h2", null, "");
+  const ico = el("span", "s-ico");
+  ico.innerHTML = svg("languages");
+  head.appendChild(ico);
+  head.appendChild(el("span", null, "Cursor"));
+  card.appendChild(head);
+  card.appendChild(el("p", "s-sub", "Pick a pointer, its color and size."));
+
+  const styles = el("div", "cur-styles");
+  for (const s of CURSOR_STYLES) {
+    const b = el("button", "cur-style" + (settings.cursorStyle === s.id ? " active" : ""));
+    b.innerHTML = `<span class="cur-ico">${svg(s.icon)}</span><span>${s.name}</span>`;
+    b.addEventListener("click", () => {
+      settings.cursorStyle = s.id;
+      saveSettings();
+      applyCursor();
+      styles.querySelectorAll(".cur-style").forEach((x) => x.classList.toggle("active", x.dataset.s === s.id));
+    });
+    b.dataset.s = s.id;
+    styles.appendChild(b);
+  }
+  card.appendChild(styles);
+
+  card.appendChild(colorSwatchRow(settings.cursorColor, (c) => {
+    settings.cursorColor = c;
+    saveSettings();
+    applyCursor();
+  }));
+
+  const cs = sSlider("cursorSmooth", 0, 100);
+  cs.addEventListener("input", () => {
+    settings.cursorSmooth = Number(cs.value);
+    saveSettings();
+  });
+  card.appendChild(sRow("Cursor lag", "How much the ring trails the dot", cs));
+
+  const sz = sSlider("cursorSize", 30, 120);
+  sz.addEventListener("input", () => {
+    settings.cursorSize = Number(sz.value);
+    saveSettings();
+  });
+  card.appendChild(sRow("Cursor size", "Scale of the pointer elements", sz));
+  return card;
+}
+
+function wallpaperCard() {
+  const card = el("div", "s-card");
+  const head = el("h2", null, "");
+  const ico = el("span", "s-ico");
+  ico.innerHTML = svg("image");
+  head.appendChild(ico);
+  head.appendChild(el("span", null, "Wallpaper"));
+  card.appendChild(head);
+  card.appendChild(el("p", "s-sub", "Animated backgrounds rendered locally on your device."));
+
+  const grid = el("div", "wp-grid");
+  for (const [id, wp] of Object.entries(WALLPAPERS)) {
+    const b = el("button", "wp-thumb" + (settings.wallpaper === id ? " active" : ""));
+    b.dataset.wp = id;
+    const cv = document.createElement("canvas");
+    cv.width = 160; cv.height = 92;
+    b.appendChild(cv);
+    b.appendChild(el("span", null, wp.name));
+    b.addEventListener("click", () => {
+      settings.wallpaper = id;
+      saveSettings();
+      applyWallpaper();
+      grid.querySelectorAll(".wp-thumb").forEach((x) => x.classList.toggle("active", x.dataset.wp === id));
+    });
+    grid.appendChild(b);
+  }
+  card.appendChild(grid);
+
+  const dim = sSlider("wallpaperDim", 5, 100);
+  dim.addEventListener("input", () => {
+    settings.wallpaperDim = Number(dim.value);
+    saveSettings();
+    applyWallpaper();
+  });
+  card.appendChild(sRow("Wallpaper brightness", "How strong the backdrop shows through", dim));
+  startThumbPreviews(grid);
+  return card;
+}
+
+function sidebarCard() {
+  const card = el("div", "s-card");
+  const head = el("h2", null, "");
+  const ico = el("span", "s-ico");
+  ico.innerHTML = svg("folder");
+  head.appendChild(ico);
+  head.appendChild(el("span", null, "Sidebar & chrome"));
+  card.appendChild(head);
+  card.appendChild(el("p", "s-sub", "Where the drawer sits, how big it is, and what it shows."));
+
+  const sideRow = el("div", "seg-row");
+  for (const [val, name] of [["left", "Left"], ["right", "Right"]]) {
+    const b = el("button", "seg" + (settings.sidebarSide === val ? " active" : ""));
+    b.textContent = name;
+    b.addEventListener("click", () => {
+      settings.sidebarSide = val;
+      saveSettings();
+      applyChrome();
+      sideRow.querySelectorAll(".seg").forEach((x) => x.classList.toggle("active", x.textContent === name));
+    });
+    sideRow.appendChild(b);
+  }
+  card.appendChild(sRow("Sidebar side", "Which edge the drawer slides from", sideRow));
+
+  const wRow = el("div", "seg-row");
+  for (const [val, name] of [["compact", "Compact"], ["normal", "Normal"], ["wide", "Wide"]]) {
+    const b = el("button", "seg" + (settings.sidebarWidth === val ? " active" : ""));
+    b.textContent = name;
+    b.addEventListener("click", () => {
+      settings.sidebarWidth = val;
+      saveSettings();
+      applyChrome();
+      wRow.querySelectorAll(".seg").forEach((x) => x.classList.toggle("active", x.textContent === name));
+    });
+    wRow.appendChild(b);
+  }
+  card.appendChild(sRow("Sidebar width", "Compact 206 · Normal 252 · Wide 300", wRow));
+
+  const navT = el("button", "switch" + (settings.navPages ? " on" : ""));
+  navT.type = "button";
+  navT.addEventListener("click", () => {
+    settings.navPages = !settings.navPages;
+    navT.classList.toggle("on", settings.navPages);
+    saveSettings();
+    applyChrome();
+    buildNav();
+  });
+  card.appendChild(sRow("Pages in sidebar", "Show the page links under the tools", navT));
+  card.appendChild(sRow("Compact sidebar", "Tighter nav rows and smaller type", sToggle("sidebarCompact")));
+  card.appendChild(sRow("Numbered pager", "The 1–7 page buttons in the header", sToggle("showPager")));
+  return card;
+}
+
 function profileCard() {
   const card = el("div", "s-card");
   const head = el("h2", null, "");
@@ -407,23 +688,120 @@ function profileCard() {
   head.appendChild(ico);
   head.appendChild(el("span", null, "Profile"));
   card.appendChild(head);
-  card.appendChild(el("p", "s-sub", "Display name used across the app. Stored on this device."));
+  card.appendChild(el("p", "s-sub", "Your identity — shown at the bottom of the sidebar and in the profile popover."));
 
   const form = el("form", "s-form");
   form.innerHTML =
     `<div class="field"><label for="s-name">Display name</label>` +
     `<input type="text" id="s-name" maxlength="40" autocomplete="nickname" spellcheck="false" /></div>` +
+    `<div class="field"><label for="s-tagline">Tagline <span class="hint">small line under your name</span></label>` +
+    `<input type="text" id="s-tagline" maxlength="60" autocomplete="off" spellcheck="false" /></div>` +
     `<div class="s-btn-row"><button type="submit" class="btn-primary">Save</button></div>` +
     `<div class="s-msg" id="s-name-msg"></div>`;
   form.querySelector("#s-name").value = settings.name;
+  form.querySelector("#s-tagline").value = settings.tagline;
+
+  const refreshPreview = () => {
+    const old = card.querySelector(".chip-prev");
+    if (old) old.remove();
+    const prev = chipPreview();
+    const sub = card.querySelector(".s-sub");
+    card.insertBefore(prev, sub ? sub.nextSibling : card.querySelector("h2").nextSibling);
+  };
+  refreshPreview();
+
   form.addEventListener("submit", (ev) => {
     ev.preventDefault();
     settings.name = form.querySelector("#s-name").value.trim().slice(0, 40);
+    settings.tagline = form.querySelector("#s-tagline").value.trim().slice(0, 60);
     saveSettings();
     applyProfile();
+    refreshPreview();
     toast("Profile updated.", "ok");
   });
   card.appendChild(form);
+
+  card.appendChild(el("div", "s-label", "Avatar picture"));
+  const avWrap = el("div");
+  avWrap.appendChild(colorSwatchRow(settings.avatarGrad, (c) => {
+    settings.avatarGrad = c;
+    saveSettings();
+    applyProfile();
+    refreshPreview();
+  }));
+  const emojis = el("div", "emoji-row");
+  const emBtn = el("button", "emoji-tile" + (settings.avatar === "letter" ? " active" : ""));
+  emBtn.textContent = "Aa";
+  emBtn.title = "Initial letter";
+  emBtn.addEventListener("click", () => {
+    settings.avatar = "letter";
+    saveSettings();
+    applyProfile();
+    refreshPreview();
+    emojis.querySelectorAll(".emoji-tile").forEach((x) => x.classList.remove("active"));
+    emBtn.classList.add("active");
+  });
+  emojis.appendChild(emBtn);
+  for (const e of AVATAR_EMOJIS) {
+    const b = el("button", "emoji-tile" + (settings.avatar === e ? " active" : ""));
+    b.textContent = e;
+    b.addEventListener("click", () => {
+      settings.avatar = e;
+      saveSettings();
+      applyProfile();
+      refreshPreview();
+      emojis.querySelectorAll(".emoji-tile").forEach((x) => x.classList.remove("active"));
+      b.classList.add("active");
+    });
+    emojis.appendChild(b);
+  }
+  avWrap.appendChild(emojis);
+  card.appendChild(avWrap);
+
+  card.appendChild(el("div", "s-label", "Profile background"));
+  const bgRow = el("div", "swatches bgswatches");
+  for (const id of Object.keys(PROFILE_BGS)) {
+    const b = el("button", "swatch bswatch" + (settings.profileBg === id ? " active" : ""));
+    b.style.setProperty("--sw", id === "default" ? "repeating-linear-gradient(135deg,#6c8bff33 0 6px,transparent 6px 12px)" : PROFILE_BGS[id]);
+    b.title = id;
+    b.innerHTML = `<span class="sw-dot grad"></span><span>${id}</span>`;
+    b.addEventListener("click", () => {
+      settings.profileBg = id;
+      saveSettings();
+      applyProfile();
+      refreshPreview();
+      bgRow.querySelectorAll(".bswatch").forEach((x) => x.classList.toggle("active", x.dataset.id === id));
+    });
+    b.dataset.id = id;
+    bgRow.appendChild(b);
+  }
+  card.appendChild(bgRow);
+
+  card.appendChild(el("div", "s-label", "Name font"));
+  const fontSel = document.createElement("select");
+  fontSel.className = "sel";
+  for (const f of NAME_FONTS) {
+    const o = document.createElement("option");
+    o.value = f.id;
+    o.textContent = f.id;
+    fontSel.appendChild(o);
+  }
+  fontSel.value = settings.nameFont;
+  fontSel.addEventListener("change", () => {
+    settings.nameFont = fontSel.value;
+    saveSettings();
+    applyProfile();
+    refreshPreview();
+  });
+  card.appendChild(fontSel);
+
+  card.appendChild(el("div", "s-label", "Name color"));
+  card.appendChild(colorSwatchRow(settings.nameColor, (c) => {
+    settings.nameColor = c;
+    saveSettings();
+    applyProfile();
+    refreshPreview();
+  }));
   return card;
 }
 
@@ -546,13 +924,16 @@ function renderSettings() {
   hero.appendChild(pageIco);
   const heroText = el("div");
   heroText.appendChild(el("h1", null, "Settings"));
-  heroText.appendChild(el("p", null, "Make L yours — themes, smoothness, and your profile. Changes save instantly."));
+  heroText.appendChild(el("p", null, "Make L yours — themes, cursor, wallpapers, sidebar, and your profile. Changes save instantly."));
   hero.appendChild(heroText);
   frag.appendChild(hero);
 
   const grid = el("div", "s-grid");
   grid.appendChild(themeCard());
   grid.appendChild(smoothCard());
+  grid.appendChild(cursorCard());
+  grid.appendChild(wallpaperCard());
+  grid.appendChild(sidebarCard());
   grid.appendChild(profileCard());
   grid.appendChild(accountCard());
   frag.appendChild(grid);
@@ -561,7 +942,6 @@ function renderSettings() {
 }
 
 loadSettings();
-applySettings();
 
 /* ================================================================
    Downloads & Tools — page 5
@@ -870,13 +1250,14 @@ function renderDownloads() {
   document.addEventListener("mouseup", () => { down = false; });
 
   (function loop() {
+    const z = settings.cursorSize / 100;
     const dotF = 0.55 - (settings.cursorSmooth / 100) * 0.37;
     const ringF = 0.22 - (settings.cursorSmooth / 100) * 0.17;
     dx += (mx - dx) * dotF; dy += (my - dy) * dotF;
     rx += (mx - rx) * ringF; ry += (my - ry) * ringF;
     const s = down ? 0.85 : 1;
-    dot.style.transform = `translate(${dx}px,${dy}px) translate(-50%,-50%) scale(${s})`;
-    ring.style.transform = `translate(${rx}px,${ry}px) translate(-50%,-50%) scale(${s})`;
+    dot.style.transform = `translate(${dx}px,${dy}px) translate(-50%,-50%) scale(${s * z})`;
+    ring.style.transform = `translate(${rx}px,${ry}px) translate(-50%,-50%) scale(${s * z})`;
     requestAnimationFrame(loop);
   })();
 
@@ -885,6 +1266,363 @@ function renderDownloads() {
     document.body.classList.toggle("cursor-hover", Boolean(t));
   });
 })();
+
+/* ================================================================
+   Animated wallpapers — canvas backdrops rendered on-device
+   ================================================================ */
+
+let _wpCanvas = null;
+let _wpCtx = null;
+function wpGet() {
+  if (!_wpCanvas) {
+    _wpCanvas = document.getElementById("wallpaper");
+    _wpCtx = _wpCanvas ? _wpCanvas.getContext("2d") : null;
+  }
+  return _wpCanvas;
+}
+function wpDPR() { return Math.min(window.devicePixelRatio || 1, 2); }
+
+function sizeWallpaper() {
+  const cv = wpGet();
+  if (!cv) return;
+  const dpr = wpDPR();
+  cv.width = Math.max(1, Math.floor(innerWidth * dpr));
+  cv.height = Math.max(1, Math.floor(innerHeight * dpr));
+  if (_wpCtx) _wpCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+let wpState = {};
+let wpRaf = 0;
+let activeWpId = "";
+let activeWpDim = -1;
+
+function applyWallpaper() {
+  const cv = wpGet();
+  if (!cv) return;
+  const id = settings.wallpaper in WALLPAPERS ? settings.wallpaper : "none";
+  const dim = (0.08 + (settings.wallpaperDim / 100) * 0.85).toFixed(2);
+  cv.style.opacity = dim;
+  if (id === activeWpId && dim === activeWpDim) return;
+  activeWpId = id;
+  activeWpDim = dim;
+  cancelAnimationFrame(wpRaf);
+  wpState = {};
+  if (id === "none") { cv.classList.add("hidden"); return; }
+  cv.classList.remove("hidden");
+  const draw = WALLPAPERS[id].draw;
+  if (!draw) return;
+  const t0 = performance.now();
+  (function loop(now) {
+    const t = (now - t0) / 1000;
+    if (_wpCtx) {
+      const w = cv.width / wpDPR();
+      const h = cv.height / wpDPR();
+      _wpCtx.clearRect(0, 0, w, h);
+      try { draw(_wpCtx, w, h, t, wpState); } catch (e) {}
+    }
+    wpRaf = requestAnimationFrame(loop);
+  })(t0);
+}
+
+window.addEventListener("resize", () => { sizeWallpaper(); wpState = {}; });
+
+const _thumbState = {};
+function startThumbPreviews(container) {
+  (function tick() {
+    requestAnimationFrame(tick);
+    if (!container.isConnected) return;
+    const t = performance.now() / 1000;
+    container.querySelectorAll(".wp-thumb").forEach((b) => {
+      const id = b.dataset.wp;
+      const cv = b.querySelector("canvas");
+      if (!cv || !cv.isConnected) return;
+      const draw = WALLPAPERS[id] && WALLPAPERS[id].draw;
+      const ctx = cv.getContext("2d");
+      const w = cv.width, h = cv.height;
+      if (!_thumbState[id]) _thumbState[id] = {};
+      ctx.clearRect(0, 0, w, h);
+      if (!draw) return;
+      try { draw(ctx, w, h, t, _thumbState[id]); } catch (e) {}
+    });
+  })();
+}
+
+const WALLPAPERS = {
+  none: { name: "None", draw: null },
+  aurora: { name: "Aurora", draw: drawAurora },
+  matrix: { name: "Matrix", draw: drawMatrix },
+  particles: { name: "Particles", draw: drawParticles },
+  waves: { name: "Waves", draw: drawWaves },
+  grid: { name: "Grid", draw: drawGrid },
+  rain: { name: "Rain", draw: drawRain },
+  ember: { name: "Ember", draw: drawEmber },
+  radar: { name: "Radar", draw: drawRadar },
+  circuit: { name: "Circuit", draw: drawCircuit },
+  snow: { name: "Snow", draw: drawSnow },
+  scan: { name: "Scanline", draw: drawScan },
+};
+
+function drawAurora(ctx, w, h, t, st) {
+  const blobs = st.blobs || (st.blobs = [
+    { hue: 222, r: 0.55, sx: 0.31, sy: 0.16, ax: 0.12, ay: 0.1, sp: 0.06 },
+    { hue: 178, r: 0.5, sx: 0.74, sy: 0.3, ax: 0.14, ay: 0.09, sp: 0.045 },
+    { hue: 292, r: 0.62, sx: 0.44, sy: 0.78, ax: 0.1, ay: 0.13, sp: 0.05 },
+    { hue: 140, r: 0.44, sx: 0.86, sy: 0.86, ax: 0.12, ay: 0.08, sp: 0.04 },
+  ]);
+  for (const b of blobs) {
+    const x = w * (b.sx + Math.sin(t * b.sp + b.ax) * b.ax);
+    const y = h * (b.sy + Math.cos(t * b.sp * 0.8 + b.ay) * b.ay);
+    const rad = Math.max(w, h) * b.r;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, rad);
+    g.addColorStop(0, `hsla(${b.hue}, 95%, 62%, 0.15)`);
+    g.addColorStop(1, "transparent");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  }
+}
+
+function drawMatrix(ctx, w, h, t, st) {
+  const glyphs = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789";
+  st.cols = st.cols || (() => {
+    const n = Math.max(12, Math.floor(w / 18));
+    const a = [];
+    for (let i = 0; i < n; i++) a.push({ i, y: Math.random() * h, v: 0.4 + Math.random() * 0.9 });
+    return a;
+  })();
+  ctx.font = "13px monospace";
+  for (const c0 of st.cols) {
+    const x = c0.i * 18 + 2;
+    ctx.fillStyle = hexToRgba(cachedAccent, 0.5);
+    ctx.fillText(glyphs[Math.floor(Math.random() * glyphs.length)], x, c0.y);
+    ctx.fillStyle = hexToRgba(cachedAccent, 0.95);
+    ctx.fillText(glyphs[Math.floor(Math.random() * glyphs.length)], x, c0.y - 14);
+    c0.y += c0.v * 1.5;
+    if (c0.y > h + 22) { c0.y = -22; c0.v = 0.4 + Math.random() * 0.9; }
+  }
+}
+
+function drawParticles(ctx, w, h, t, st) {
+  st.n = st.n || Math.min(85, Math.floor((w * h) / 16000));
+  st.pts = st.pts || (() => {
+    const a = [];
+    for (let i = 0; i < st.n; i++) {
+      a.push({ x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - 0.5) * 0.32, vy: (Math.random() - 0.5) * 0.32 });
+    }
+    return a;
+  })();
+  for (const p of st.pts) {
+    p.x += p.vx; p.y += p.vy;
+    if (p.x < 0 || p.x > w) p.vx *= -1;
+    if (p.y < 0 || p.y > h) p.vy *= -1;
+  }
+  for (let i = 0; i < st.n; i++) {
+    for (let j = i + 1; j < st.n; j++) {
+      const a = st.pts[i], b = st.pts[j];
+      const dx = a.x - b.x, dy = a.y - b.y, d2 = dx * dx + dy * dy;
+      if (d2 < 10000) {
+        ctx.strokeStyle = hexToRgba(cachedAccent, 0.16 * (1 - d2 / 10000));
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      }
+    }
+  }
+  ctx.fillStyle = hexToRgba(cachedAccent, 0.4);
+  for (const p of st.pts) ctx.fillRect(p.x - 1, p.y - 1, 2, 2);
+}
+
+function drawWaves(ctx, w, h, t, st) {
+  const base = h * 0.6;
+  ctx.lineWidth = 2;
+  for (let l = 0; l < 3; l++) {
+    const amp = 28 + l * 16;
+    const freq = 0.008 + l * 0.003;
+    const sp = 0.9 + l * 0.5;
+    ctx.strokeStyle = hexToRgba(cachedAccent, 0.34 - l * 0.08);
+    ctx.beginPath();
+    for (let x = 0; x <= w; x += 6) {
+      const y = base + Math.sin(x * freq + t * sp + l * 2.1) * amp + l * 60;
+      if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+}
+
+function drawGrid(ctx, w, h, t, st) {
+  const horizon = h * 0.72;
+  const cx = w / 2;
+  ctx.strokeStyle = hexToRgba(cachedAccent, 0.22);
+  ctx.lineWidth = 1;
+  for (let i = -12; i <= 12; i++) {
+    ctx.beginPath();
+    ctx.moveTo(cx + i * 40, horizon);
+    ctx.lineTo(cx + i * 56, h);
+    ctx.stroke();
+  }
+  const rows = 14, speed = 0.22;
+  for (let i = 0; i < rows; i++) {
+    const z = ((i + (t * speed % 1)) / rows);
+    const y = horizon + (h - horizon) * z * z;
+    ctx.globalAlpha = 0.05 + z * 0.5;
+    ctx.beginPath();
+    ctx.moveTo(0, y); ctx.lineTo(w, y);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  const sun = ctx.createLinearGradient(cx - 90, horizon - 170, cx + 90, horizon);
+  sun.addColorStop(0, hexToRgba(cachedAccent, 0.05));
+  sun.addColorStop(1, hexToRgba(cachedAccent, 0.45));
+  ctx.fillStyle = sun;
+  ctx.beginPath();
+  ctx.arc(cx, horizon, 80, Math.PI, 0);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawRain(ctx, w, h, t, st) {
+  st.drops = st.drops || (() => {
+    const n = Math.min(120, Math.floor((w * h) / 12000));
+    const a = [];
+    for (let i = 0; i < n; i++) a.push({ x: Math.random() * w, y: Math.random() * h, len: 12 + Math.random() * 16, sp: 6 + Math.random() * 7 });
+    return a;
+  })();
+  ctx.strokeStyle = hexToRgba(cachedAccent, 0.35);
+  ctx.lineWidth = 1.5;
+  for (const d of st.drops) {
+    d.y += d.sp * 0.9;
+    d.x -= d.sp * 0.12;
+    if (d.y > h + 20) { d.y = -20; d.x = Math.random() * w; }
+    ctx.beginPath();
+    ctx.moveTo(d.x, d.y);
+    ctx.lineTo(d.x - d.len * 0.14, d.y - d.len);
+    ctx.stroke();
+  }
+}
+
+function drawEmber(ctx, w, h, t, st) {
+  st.p = st.p || (() => {
+    const n = Math.min(80, Math.floor((w * h) / 14000));
+    const a = [];
+    for (let i = 0; i < n; i++) {
+      a.push({ x: Math.random() * w, y: h + Math.random() * h, r: 1 + Math.random() * 2, sp: 0.3 + Math.random() * 0.9, ph: Math.random() * 6.2832 });
+    }
+    return a;
+  })();
+  for (const p of st.p) {
+    p.y -= p.sp;
+    p.x += Math.sin(t * 0.8 + p.ph) * 0.4;
+    if (p.y < -10) { p.y = h + 10; p.x = Math.random() * w; }
+    const a = Math.min(1, (h - p.y) / h + 0.2);
+    ctx.fillStyle = `rgba(251,146,60,${(0.14 * a).toFixed(3)})`;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 3, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = `rgba(251,146,60,${(0.5 * a).toFixed(3)})`;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.2832); ctx.fill();
+  }
+}
+
+function drawRadar(ctx, w, h, t, st) {
+  const r = Math.min(w, h) * 0.42;
+  const cx = w / 2, cy = h * 0.55;
+  ctx.strokeStyle = hexToRgba(cachedAccent, 0.2);
+  ctx.lineWidth = 1;
+  for (let i = 1; i <= 4; i++) {
+    ctx.beginPath(); ctx.arc(cx, cy, r * i / 4, 0, 6.2832); ctx.stroke();
+  }
+  const ang = t * 1.2;
+  ctx.fillStyle = hexToRgba(cachedAccent, 0.12);
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.arc(cx, cy, r, ang - 0.35, ang);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = hexToRgba(cachedAccent, 0.7);
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(ang) * r, cy + Math.sin(ang) * r);
+  ctx.stroke();
+  st.blips = st.blips || (() => {
+    const a = [];
+    for (let i = 0; i < 12; i++) a.push({ ang: Math.random() * 6.2832, dist: Math.random() * r });
+    return a;
+  })();
+  for (const b of st.blips) {
+    if (((ang - b.ang) % 6.2832 + 6.2832) % 6.2832 > 0.55) continue;
+    const bx = cx + Math.cos(b.ang) * b.dist;
+    const by = cy + Math.sin(b.ang) * b.dist;
+    ctx.fillStyle = hexToRgba(cachedAccent, 0.9);
+    ctx.beginPath(); ctx.arc(bx, by, 2.2, 0, 6.2832); ctx.fill();
+  }
+}
+
+function drawCircuit(ctx, w, h, t, st) {
+  st.nodes = st.nodes || (() => {
+    const cols = Math.max(6, Math.floor(w / 80));
+    const rows = Math.max(4, Math.floor(h / 70));
+    const a = [];
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        a.push({ x: 40 + c * 80 + (Math.random() * 14 - 7), y: 40 + r * 70 + (Math.random() * 12 - 6) });
+      }
+    }
+    return a;
+  })();
+  ctx.strokeStyle = hexToRgba(cachedAccent, 0.2);
+  ctx.fillStyle = hexToRgba(cachedAccent, 0.5);
+  for (const n of st.nodes) {
+    ctx.beginPath(); ctx.arc(n.x, n.y, 2, 0, 6.2832); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(n.x, n.y); ctx.lineTo(n.x + 30, n.y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(n.x, n.y); ctx.lineTo(n.x, n.y + 24); ctx.stroke();
+  }
+  st.pulses = st.pulses || (() => {
+    const a = [];
+    for (let i = 0; i < 12; i++) a.push({ s: Math.random(), v: 0.012 + Math.random() * 0.012 });
+    return a;
+  })();
+  for (const p of st.pulses) {
+    p.s += p.v;
+    if (p.s > 1) p.s = 0;
+    const i = Math.floor(p.s * (st.nodes.length - 1));
+    const n = st.nodes[i], m = st.nodes[i + 1];
+    if (!n || !m) continue;
+    const f = p.s * (st.nodes.length - 1) - i;
+    const px = n.x + (m.x - n.x) * f;
+    const py = n.y + (m.y - n.y) * f;
+    ctx.fillStyle = hexToRgba(cachedAccent, 0.9);
+    ctx.beginPath(); ctx.arc(px, py, 2.4, 0, 6.2832); ctx.fill();
+  }
+}
+
+function drawSnow(ctx, w, h, t, st) {
+  st.fl = st.fl || (() => {
+    const n = Math.min(90, Math.floor((w * h) / 16000));
+    const a = [];
+    for (let i = 0; i < n; i++) a.push({ x: Math.random() * w, y: Math.random() * h, r: 0.8 + Math.random() * 1.8, sp: 0.3 + Math.random() * 0.7, ph: Math.random() * 6.2832 });
+    return a;
+  })();
+  ctx.fillStyle = "rgba(226,232,240,0.8)";
+  for (const f of st.fl) {
+    f.y += f.sp;
+    f.x += Math.sin(t * 0.7 + f.ph) * 0.35;
+    if (f.y > h + 4) { f.y = -4; f.x = Math.random() * w; }
+    ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 6.2832); ctx.fill();
+  }
+}
+
+function drawScan(ctx, w, h, t, st) {
+  const y = (t * 0.25 % 1) * h;
+  const g = ctx.createLinearGradient(0, y - 90, 0, y + 90);
+  g.addColorStop(0, "rgba(0,0,0,0)");
+  g.addColorStop(0.5, hexToRgba(cachedAccent, 0.45));
+  g.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, y - 90, w, 180);
+  ctx.fillStyle = "rgba(0,0,0,0.14)";
+  for (let i = 0; i < h; i += 3) ctx.fillRect(0, i, w, 1);
+  ctx.fillStyle = hexToRgba(cachedAccent, 0.8);
+  ctx.fillRect(0, y - 1, w, 2);
+}
+
+sizeWallpaper();
+applyWallpaper();
+applySettings();
 
 /* ================================================================
    Shell chrome — drawer, home screen, smooth typing
@@ -914,7 +1652,7 @@ crumbHome.addEventListener("click", () => renderHome());
 
 document.addEventListener("keydown", (ev) => {
   if (ev.target && /INPUT|TEXTAREA|SELECT/.test(ev.target.tagName)) return;
-  if (ev.key === "Escape") { closeSidebar(); closePalette(); return; }
+  if (ev.key === "Escape") { closeSidebar(); closePalette(); closeProfile(); return; }
   if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "k") {
     ev.preventDefault();
     openPalette();
@@ -962,6 +1700,7 @@ function renderHome() {
   menuBtn.classList.remove("hidden");
   closeSidebar();
   setPageActive(1);
+  setActiveNav("tool", "__none__");
   setPageTitle("Home");
   setStatus("ok");
 
@@ -986,7 +1725,7 @@ function renderHome() {
   const pages = [
     ["learn", "Field Manual", "OPSEC · OSINT · CSINT · EDR · doxing · threat modeling", "2", "book"],
     ["protect", "Hardening Guide", "Attack surface · lock down · remove data · clear your name", "3", "shield"],
-    ["settings", "Settings", "Themes · smoothness · cursor · profile", "4", "gear"],
+    ["settings", "Settings", "Themes · cursor · wallpapers · sidebar · profile", "4", "gear"],
     ["downloads", "Downloads & Tools", "Install & harden — VPNs, EDR, broker removal, encrypted storage", "5", "download"],
     ["investigations", "Investigations", "Saved cases — targets, notes, and results over time", "6", "folder"],
     ["ai", "AI Assistant", "General-purpose chat — ask questions, get things done", "7", "sparkles"],
@@ -1129,9 +1868,7 @@ function showApp(email) {
   appView.classList.remove("hidden");
   const ue = document.getElementById("user-email");
   ue.dataset.email = email;
-  ue.textContent = (settings.name || "").trim() || email;
-  const av = document.getElementById("user-avatar");
-  av.textContent = (((settings.name || "").trim()[0]) || email[0] || "?").toUpperCase();
+  applyProfile();
   runBoot(() => {
     setPageActive(1);
     renderHome();
@@ -1274,14 +2011,100 @@ formRegister.addEventListener("submit", async (ev) => {
   }
 });
 
-document.getElementById("btn-logout").addEventListener("click", async () => {
-  await fetch("/api/auth/logout", { method: "POST" });
-  showAuth();
-  setAuthTab("login");
-  formLogin.reset();
-  formRegister.reset();
-  toast("Logged out.");
-});
+/* ================================================================
+   Profile modal — click the profile chip at the bottom of the sidebar
+   ================================================================ */
+
+let profileTypeTimer = 0;
+
+function logout() {
+  fetch("/api/auth/logout", { method: "POST" }).finally(() => {
+    closeProfile();
+    showAuth();
+    setAuthTab("login");
+    formLogin.reset();
+    formRegister.reset();
+    toast("Logged out.");
+  });
+}
+
+function typeProfileName(node) {
+  clearTimeout(profileTypeTimer);
+  const name = (settings.name || "").trim() || sessionEmail || "";
+  if (!name) return;
+  const m = 1.4 - (settings.type / 100) * 1.05;
+  let pos = 0, deleting = false;
+  (function tick() {
+    node.textContent = name.slice(0, pos);
+    if (!deleting) {
+      pos++;
+      if (pos === name.length) {
+        deleting = true;
+        profileTypeTimer = setTimeout(tick, 2200 * m);
+        return;
+      }
+      profileTypeTimer = setTimeout(tick, (34 + Math.random() * 40) * m);
+    } else {
+      pos--;
+      if (pos === 0) { pos = 1; deleting = false; }
+      profileTypeTimer = setTimeout(tick, 16 * m);
+    }
+  })();
+}
+
+function openProfile() {
+  let modal = document.getElementById("profile-modal");
+  if (!modal) {
+    modal = el("div", "profile-modal");
+    modal.id = "profile-modal";
+    modal.innerHTML =
+      `<div class="p-card">` +
+        `<div class="p-banner">` +
+          `<span class="p-av"></span>` +
+          `<div class="p-name-wrap"><span class="p-name"></span><span class="p-caret"></span></div>` +
+          `<div class="p-tag"></div>` +
+        `</div>` +
+        `<div class="p-actions">` +
+          `<button class="p-edit">${svg("gear")}<span>Edit profile</span></button>` +
+          `<button class="p-logout">${svg("lock")}<span>Log out</span></button>` +
+        `</div>` +
+      `</div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener("click", (ev) => {
+      if (ev.target === modal) closeProfile();
+    });
+    modal.querySelector(".p-edit").addEventListener("click", () => {
+      closeProfile();
+      switchPage(4);
+    });
+    modal.querySelector(".p-logout").addEventListener("click", logout);
+  }
+
+  const email = document.getElementById("user-email") ? document.getElementById("user-email").dataset.email : sessionEmail;
+  const name = (settings.name || "").trim();
+  const first = (name || email || "?").trim()[0] || "?";
+  const av = modal.querySelector(".p-av");
+  av.style.background = gradCss(settings.avatarGrad);
+  av.textContent = settings.avatar && settings.avatar !== "letter" ? settings.avatar : first.toUpperCase();
+  const banner = modal.querySelector(".p-banner");
+  banner.style.background = gradCss(settings.profileBg);
+  const nameEl = modal.querySelector(".p-name");
+  nameEl.style.fontFamily = fontCss(settings.nameFont);
+  nameEl.style.color = settings.nameColor || "var(--text)";
+  const tag = modal.querySelector(".p-tag");
+  tag.textContent = (settings.tagline || "").trim() || (name ? "Your profile" : email || "");
+  modal.classList.add("show");
+  typeProfileName(nameEl);
+}
+
+function closeProfile() {
+  clearTimeout(profileTypeTimer);
+  const modal = document.getElementById("profile-modal");
+  if (modal) modal.classList.remove("show");
+}
+
+const userBtn = document.getElementById("user-btn");
+if (userBtn) userBtn.addEventListener("click", openProfile);
 
 /* ================================================================
    App shell
@@ -1320,16 +2143,20 @@ function siteGrid(sites) {
   return grid;
 }
 
-function buildShell() {
+const PAGE_NAV = [
+  [2, "Field Manual", "book"],
+  [3, "Hardening Guide", "shield"],
+  [4, "Settings", "gear"],
+  [5, "Downloads & Tools", "download"],
+  [6, "Investigations", "folder"],
+  [7, "AI Assistant", "sparkles"],
+];
+
+function buildNav() {
   const nav = document.getElementById("nav");
-  const content = document.getElementById("content");
-
-  const navLabel = (text) => {
-    const d = el("div", "nav-label", text);
-    nav.appendChild(d);
-  };
-
-  navLabel("Tools");
+  if (!nav) return;
+  nav.innerHTML = "";
+  nav.appendChild(el("div", "nav-label", "Tools"));
   TOOLS.forEach((t, i) => {
     const b = el("button", "nav-item" + (i === 0 ? " active" : ""));
     b.dataset.kind = "tool";
@@ -1337,7 +2164,29 @@ function buildShell() {
     b.innerHTML = `<span class="ico">${svg(t.icon)}</span>${t.title}`;
     b.addEventListener("click", () => switchTool(t.id));
     nav.appendChild(b);
+  });
+  if (settings.navPages) {
+    nav.appendChild(el("div", "nav-label", "Pages"));
+    for (const [n, title, icon] of PAGE_NAV) {
+      const b = el("button", "nav-item");
+      b.dataset.kind = "page";
+      b.dataset.page = String(n);
+      b.innerHTML = `<span class="ico">${svg(icon)}</span>${title}`;
+      b.addEventListener("click", () => switchPage(n));
+      nav.appendChild(b);
+    }
+  }
+  if (currentPage >= 2 && currentPage <= 7) setActiveNav("page", String(currentPage));
+  else setActiveNav("tool", currentToolId);
+}
 
+function buildShell() {
+  const nav = document.getElementById("nav");
+  const content = document.getElementById("content");
+
+  buildNav();
+
+  TOOLS.forEach((t, i) => {
     const section = el("section", "tool" + (i === 0 ? "" : " hidden"));
     section.id = "tool-" + t.id;
     if (t.custom) {
@@ -1431,7 +2280,8 @@ function buildShell() {
 
 function setActiveNav(kind, id) {
   document.querySelectorAll(".nav-item").forEach((b) => {
-    b.classList.toggle("active", b.dataset.kind === kind && b.dataset.tool === id);
+    const match = b.dataset.kind === kind && (b.dataset.tool === id || b.dataset.page === id);
+    b.classList.toggle("active", match);
   });
 }
 
@@ -1519,6 +2369,8 @@ function setPageActive(n) {
 
 function switchPage(n) {
   setPageActive(n);
+  if (n === 1) setActiveNav("tool", "__none__");
+  else if (n >= 2 && n <= 7) setActiveNav("page", String(n));
   const view = document.getElementById("page-view");
   if (n === 1) {
     document.querySelectorAll(".tool").forEach((s) => s.classList.add("hidden"));
@@ -3057,7 +3909,7 @@ function paletteItems() {
   items.push({ label: "Home", sub: "Tool grid", icon: "globe", run: () => renderHome() });
   items.push({ label: "Field Manual", sub: "OPSEC · OSINT · CSINT · EDR · doxing", icon: "book", run: () => switchPage(2) });
   items.push({ label: "Hardening Guide", sub: "Protect yourself, clear your name", icon: "shield", run: () => switchPage(3) });
-  items.push({ label: "Settings", sub: "Themes, smoothness, profile", icon: "gear", run: () => switchPage(4) });
+  items.push({ label: "Settings", sub: "Themes, cursor, wallpapers, sidebar, profile", icon: "gear", run: () => switchPage(4) });
   items.push({ label: "Downloads & Tools", sub: "Everything to install to stay untrackable", icon: "download", run: () => switchPage(5) });
   items.push({ label: "Investigations", sub: "Saved cases and notes", icon: "folder", run: () => switchPage(6) });
   items.push({ label: "AI Assistant", sub: "Ask anything", icon: "sparkles", run: () => switchPage(7) });
