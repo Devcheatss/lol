@@ -1049,7 +1049,8 @@ function makeTyped(input) {
     for (let i = 0; i < shown.length; i++) {
       const isNew = i >= lastLen;
       const st = isNew ? ` style="animation-delay:${Math.min((i - lastLen) * 22, 420)}ms"` : "";
-      parts.push(`<span class="ti-char${isNew ? " ti-in" : ""}"${st}>${esc(shown[i])}</span>`);
+      const ch = shown[i] === " " ? "\u00A0" : shown[i];
+      parts.push(`<span class="ti-char${isNew ? " ti-in" : ""}"${st}>${esc(ch)}</span>`);
     }
     textEl.innerHTML = parts.join("");
 
