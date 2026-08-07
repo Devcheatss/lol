@@ -1110,7 +1110,7 @@ app.delete("/api/investigations/:id", requireAuth, async (req, res) => {
 });
 
 /* ------------------------------------------------------------------ */
-/* AI assistant (DeepSeek)                                              */
+/* AI assistant (Groq / OpenAI-compatible)                              */
 /* ------------------------------------------------------------------ */
 
 app.get("/api/chat/status", requireAuth, (req, res) => {

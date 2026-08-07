@@ -989,7 +989,7 @@ function renderHome() {
     ["settings", "Settings", "Themes · smoothness · cursor · profile", "4", "gear"],
     ["downloads", "Downloads & Tools", "Install & harden — VPNs, EDR, broker removal, encrypted storage", "5", "download"],
     ["investigations", "Investigations", "Saved cases — targets, notes, and results over time", "6", "folder"],
-    ["ai", "AI Assistant", "DeepSeek copilot — runs every lookup and interprets results", "7", "sparkles"],
+    ["ai", "AI Assistant", "General-purpose chat — ask questions, get things done", "7", "sparkles"],
   ];
   for (const [id, title, desc, tag, icon] of pages) {
     const c = el("button", "home-card page-card");
@@ -2955,7 +2955,7 @@ function renderAi() {
   hero.appendChild(pageIco);
   const heroText = el("div");
   heroText.appendChild(el("h1", null, "AI Assistant"));
-  heroText.appendChild(el("p", null, "An OSINT + OPSEC copilot powered by DeepSeek. It can run every lookup in this toolkit and interpret the results."));
+  heroText.appendChild(el("p", null, "Ask anything — general knowledge, writing, coding, ideas. Powered by Groq."));
   hero.appendChild(heroText);
   frag.appendChild(hero);
 
@@ -2967,7 +2967,7 @@ function renderAi() {
   const input = document.createElement("input");
   input.type = "text";
   input.className = "q chat-input";
-  input.placeholder = "Ask about a domain, email, or your OPSEC…";
+  input.placeholder = "Ask me anything…";
   input.autocomplete = "off";
   input.spellcheck = false;
   const sendBtn = el("button", "btn-primary", "Send");
@@ -2983,7 +2983,7 @@ function renderAi() {
     }
   }).catch(() => {});
 
-  const suggestions = ["Check a domain for me", "Scan example.com", "What should I install first?", "Is this email breached?"];
+  const suggestions = ["Explain something simply", "Help me write a message", "Give me ideas", "Solve a problem"];
   const sugg = el("div", "chat-sugg");
   for (const s of suggestions) {
     const b = el("button", "chip", s);
@@ -3060,7 +3060,7 @@ function paletteItems() {
   items.push({ label: "Settings", sub: "Themes, smoothness, profile", icon: "gear", run: () => switchPage(4) });
   items.push({ label: "Downloads & Tools", sub: "Everything to install to stay untrackable", icon: "download", run: () => switchPage(5) });
   items.push({ label: "Investigations", sub: "Saved cases and notes", icon: "folder", run: () => switchPage(6) });
-  items.push({ label: "AI Assistant", sub: "DeepSeek OSINT copilot", icon: "sparkles", run: () => switchPage(7) });
+  items.push({ label: "AI Assistant", sub: "Ask anything", icon: "sparkles", run: () => switchPage(7) });
   items.push({ label: "Export last result", sub: lastResult ? lastResult.tool + " — " + lastResult.query : "Run a lookup first", icon: "download", run: () => lastResult && downloadJSON(lastResult.data, slug(lastResult.tool) + ".json") });
   return items;
 }
