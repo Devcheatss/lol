@@ -2978,7 +2978,7 @@ function renderAi() {
 
   apiGet("/api/chat/status").then((s) => {
     if (!s.configured) {
-      log.appendChild(stateEl("note", "AI is not configured on this server. Set DEEPSEEK_API_KEY in the server environment to enable it."));
+      log.appendChild(stateEl("note", "AI is not configured on this server. Set AI_API_KEY (Groq) in the server environment to enable it."));
     }
   }).catch(() => {});
 

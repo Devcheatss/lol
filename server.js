@@ -28,7 +28,9 @@ const chat = require("./lib/chat");
 const app = express();
 const PORT = process.env.PORT || 3000;
 const HIBP_API_KEY = process.env.HIBP_API_KEY || "";
-const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || "";
+const AI_API_KEY = process.env.AI_API_KEY || process.env.DEEPSEEK_API_KEY || "";
+const AI_API_URL = process.env.AI_API_URL || "https://api.groq.com/openai/v1";
+const AI_MODEL = process.env.AI_MODEL || "llama-3.3-70b-versatile";
 const RATE_LIMIT = Number(process.env.RATE_LIMIT) || 240;
 const RATE_WINDOW_MS = Number(process.env.RATE_WINDOW_MS) || 10 * 60 * 1000;
 
@@ -1112,12 +1114,12 @@ app.delete("/api/investigations/:id", requireAuth, async (req, res) => {
 /* ------------------------------------------------------------------ */
 
 app.get("/api/chat/status", requireAuth, (req, res) => {
-  res.json({ ok: true, configured: Boolean(DEEPSEEK_API_KEY) });
+  res.json({ ok: true, configured: Boolean(AI_API_KEY), provider: "Groq", model: AI_MODEL });
 });
 
 app.post("/api/chat", requireAuth, async (req, res) => {
-  if (!DEEPSEEK_API_KEY) {
-    return fail(res, 503, "AI is not configured on this server. Set the DEEPSEEK_API_KEY environment variable.");
+  if (!AI_API_KEY) {
+    return fail(res, 503, "AI is not configured on this server. Set the AI_API_KEY environment variable.");
   }
   const messages = Array.isArray(req.body && req.body.messages) ? req.body.messages : [];
   if (!messages.length) return fail(res, 400, "No messages provided.");
@@ -1128,7 +1130,7 @@ app.post("/api/chat", requireAuth, async (req, res) => {
     if (m.content.length > 8000) return fail(res, 400, "Message too long.");
   }
   try {
-    const out = await chat.runChat(DEEPSEEK_API_KEY, messages);
+    const out = await chat.runChat({ apiKey: AI_API_KEY, baseUrl: AI_API_URL, model: AI_MODEL }, messages);
     res.json({ ok: true, ...out });
   } catch (err) {
     res.status(502).json({ ok: false, error: "AI request failed", detail: err.message });
