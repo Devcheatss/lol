@@ -1302,6 +1302,7 @@ function applyWallpaper() {
   const id = settings.wallpaper in WALLPAPERS ? settings.wallpaper : "none";
   const dim = (0.08 + (settings.wallpaperDim / 100) * 0.85).toFixed(2);
   cv.style.opacity = dim;
+  document.body.dataset.wp = id;
   if (id === activeWpId && dim === activeWpDim) return;
   activeWpId = id;
   activeWpDim = dim;

@@ -1075,6 +1075,11 @@ td:last-child, th:last-child { padding-right: 4px; }
   padding: 24px 34px 80px;
   scroll-behavior: smooth;
 }
+body[data-wp]:not([data-wp="none"]) .page-view {
+  background:
+    radial-gradient(ellipse 70% 45% at 50% -8%, rgba(108, 139, 255, 0.07), transparent 60%),
+    rgba(9, 9, 13, 0.32);
+}
 
 .page-hero {
   display: flex;
